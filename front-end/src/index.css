@@ -1,0 +1,12 @@
+@import url(https://fonts.googleapis.com/css?family=Nunito);
+@import url(~bootstrap/dist/css/bootstrap.css);
+@import url(~@fortawesome/fontawesome-free/css/all.css);
+@import url(./asset/themify/themify-icons.css);
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #ebebeb;
+  font-family: 'Nunito Regular', cursive;
+  font-size: 14px !important;
+}
