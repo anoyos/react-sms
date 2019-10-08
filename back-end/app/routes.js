@@ -1,5 +1,6 @@
 const Message = require("./models/Message");
 const User = require("./models/User");
+const crypto = require("crypto");
 const io = require("socket.io")();
 const socketport = 8000;
 
@@ -29,7 +30,6 @@ module.exports = function(app) {
   });
   app.post("/callback", function(req, res) {
     let callback = req.body[0];
-    console.log("callback===>", callback);
     if (callback && callback.type === "message-received") {
       let message = callback.message;
       Message.findOne(
@@ -38,13 +38,26 @@ module.exports = function(app) {
         },
         function(err, result) {
           if (!result) {
-            const msgData = {
-              from_number: message.from,
-              to_number: callback.to,
-              text: message.text,
-              direction: "in",
-              message_id: message.id
-            };
+            let msgData;
+            if (result && result.media) {
+              msgData = {
+                from_number: message.from,
+                to_number: callback.to,
+                text: message.text,
+                direction: "in",
+                media: message.media[0],
+                message_id: message.id
+              };
+            } else {
+              msgData = {
+                from_number: message.from,
+                to_number: callback.to,
+                text: message.text,
+                direction: "in",
+                message_id: message.id
+              };
+            }
+            console.log("callback===>", callback);
             Message.create(msgData, function(err1, res1) {
               if (res1) {
                 let data = {
@@ -87,52 +100,43 @@ module.exports = function(app) {
     });
   });
   app.post("/api/getmessages", function(req, res) {
-    const { from_number, to_number, state } = req.body.msgData;
-    if (state) {
-      Message.find(
-        {
-          $or: [{ to_number: to_number }, { from_number: to_number }]
-        },
-        null,
-        { sort: { field: "asc" } },
-        function(err, result) {
-          if (err) {
-            console.log(err);
-          } else {
-            res.send(result);
-          }
+    const { fromNumber, toNumber } = req.body.msgData;
+    Message.updateMany(
+      {
+        $or: [
+          { from_number: toNumber, to_number: fromNumber, direction: "out" },
+          { from_number: toNumber, to_number: fromNumber, direction: "in" }
+        ]
+      },
+      { $set: { state: 1 } },
+      function(err, result) {
+        if (err) {
+          return err;
+        } else {
+          Message.find(
+            {
+              $or: [
+                { from_number: fromNumber, to_number: toNumber },
+                { from_number: toNumber, to_number: fromNumber }
+              ]
+            },
+            null,
+            { sort: { field: "asc" } },
+            function(err, result) {
+              if (err) {
+                console.log(err);
+              } else {
+                res.send(result);
+              }
+            }
+          );
         }
-      );
-    } else {
-      Message.find(
-        {
-          $or: [
-            { from_number: from_number, to_number: to_number },
-            { from_number: to_number, to_number: from_number }
-          ]
-        },
-        null,
-        { sort: { field: "asc" } },
-        function(err, result) {
-          if (err) {
-            console.log(err);
-          } else {
-            res.send(result);
-          }
-        }
-      );
-    }
+      }
+    );
   });
   app.post("/api/getnumbers", function(req, res) {
-    const { fromNumber, mainNums } = req.body;
+    const { fromNumber } = req.body;
     const array = [];
-    if (mainNums) {
-      mainNums.forEach(num => {
-        if (num !== "0") {
-          array.push({ memberNum: num });
-        }
-      });
-    }
     Message.find(
       { $or: [{ from_number: fromNumber }, { to_number: fromNumber }] },
       { from_number: 1, to_number: 1, _id: 0 },
@@ -154,13 +158,41 @@ module.exports = function(app) {
           const arr = array.filter(
             (v, i, a) => a.findIndex(t => t.memberNum === v.memberNum) === i
           );
-          res.send(arr);
+          let notifies = [];
+
+          let index = 0;
+          arr.forEach(num => {
+            Message.find(
+              {
+                from_number: num.memberNum,
+                to_number: fromNumber,
+                state: "0",
+                direction: "in"
+              },
+              function(err, result) {
+                if (err) {
+                  console.log(err);
+                } else {
+                  if (result.length > 0) {
+                    notifies.push({
+                      number: num.memberNum,
+                      newMsg: result.length
+                    });
+                  }
+                  index++;
+                  if (index === arr.length) {
+                    res.send({ members: arr, notifies: notifies });
+                  }
+                }
+              }
+            );
+          });
         }
       }
     );
   });
   app.post("/api/saveusernumber", function(req, res) {
-    User.updateOne(
+    User.findOneAndUpdate(
       {
         email: req.body.email
       },
@@ -172,6 +204,19 @@ module.exports = function(app) {
       }
     );
   });
+  app.post("/api/fileupload", (req, res, next) => {
+    let imageFile = req.files.file;
+    var filename = crypto.randomBytes(15).toString("hex");
+    imageFile.mv(`${__dirname}/../public/mms_images/${filename}.jpg`, function(
+      err
+    ) {
+      if (err) {
+        return res.status(500).send(err);
+      }
+      res.json({ file: `${filename}.jpg` });
+    });
+  });
+
   io.listen(socketport);
   // application -------------------------------------------------------------
   app.get("*", function(req, res) {

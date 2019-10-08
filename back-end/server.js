@@ -13,7 +13,7 @@ const methodOverride = require("method-override");
 
 const path = require("path");
 const cors = require("cors");
-
+const fileUpload = require("express-fileupload");
 // configuration ===============================================================
 mongoose.Promise = require("bluebird");
 mongoose.connect(database.localUrl, {
@@ -36,6 +36,8 @@ const corsOption = {
 };
 app.use(cors(corsOption));
 app.use(cors());
+app.use(fileUpload());
+
 // routes ======================================================================
 require("./app/routes.js")(app);
 

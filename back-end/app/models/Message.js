@@ -3,6 +3,10 @@ const Schema = mongoose.Schema;
 
 var MessageSchema = new Schema(
   {
+    message_id: {
+      type: String,
+      default: ""
+    },
     from_number: {
       type: String,
       default: ""
@@ -15,13 +19,22 @@ var MessageSchema = new Schema(
       type: String,
       default: ""
     },
-    message_id: {
+    media: {
       type: String,
       default: ""
     },
+
     direction: {
       type: String,
       default: ""
+    },
+    sender: {
+      type: String,
+      default: ""
+    },
+    state: {
+      type: String,
+      default: "0"
     }
   },
   {
