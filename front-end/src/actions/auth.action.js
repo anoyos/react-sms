@@ -52,6 +52,11 @@ export const getNewAuthToken = (username, password, accountname) => {
                 userEmail: userData.data.data.email,
                 mainNums: mainNums,
               }
+              mainNums.forEach(num => {
+                if (num !== '0') {
+                  phone_num.push(num)
+                }
+              })
               axios
                 .post(`${CONFIG.serverURL}/api/userchk`, {
                   email: userData.data.data.email,

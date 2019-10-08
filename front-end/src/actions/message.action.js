@@ -3,9 +3,35 @@ import CONFIG from '../constants/config'
 import * as CONSTS from '../constants/const'
 
 axios.defaults.headers.post['Content-Type'] = 'application/json'
-export const sendMessage = (toNumber, fromNumber, text, mainNums) => {
+export const sendMessage = (
+  toNumber,
+  fromNumber,
+  text,
+  sender,
+  uploadImgName,
+) => {
   return async dispatch => {
     const URL = `${CONFIG.corsURL}${CONFIG.Mssgae_URL}/users/${CONFIG.accountId}/messages`
+    let data = null
+    if (uploadImgName) {
+      data = {
+        to: [toNumber],
+        from: fromNumber,
+        text: text,
+        applicationId: CONFIG.applicationId,
+        media: [`${CONFIG.serverURL}/mms_images/${uploadImgName}`],
+        tag: 'test message',
+      }
+    } else {
+      data = {
+        to: [toNumber],
+        from: fromNumber,
+        text: text,
+        applicationId: CONFIG.applicationId,
+        tag: 'test message',
+      }
+    }
+
     await axios({
       url: URL,
       method: 'post',
@@ -14,29 +40,38 @@ export const sendMessage = (toNumber, fromNumber, text, mainNums) => {
         username: CONFIG.apiToken,
         password: CONFIG.apiSecret,
       },
-      data: {
-        to: [toNumber],
-        from: fromNumber,
-        text: text,
-        applicationId: CONFIG.applicationId,
-        tag: 'test message',
-      },
+      data: data,
     })
       .then(res => {
         if (res && res.statusText === 'Accepted' && res.status === 202) {
-          const sendMsgData = {
-            from_number: fromNumber,
-            to_number: toNumber,
-            text: text,
-            direction: 'out',
-            message_id: res.data.id,
+          let sendMsgData = null
+          if (res.data.media) {
+            sendMsgData = {
+              from_number: fromNumber,
+              to_number: toNumber,
+              text: text,
+              direction: 'out',
+              message_id: res.data.id,
+              sender: sender,
+              media: res.data.media[0],
+            }
+          } else {
+            sendMsgData = {
+              from_number: fromNumber,
+              to_number: toNumber,
+              text: text,
+              direction: 'out',
+              message_id: res.data.id,
+              sender: sender,
+            }
           }
+
           axios
             .post(`${CONFIG.serverURL}/api/sendmessage`, {
               sendMsgData,
             })
             .then(res1 => {
-              dispatch(getAllNumbers(fromNumber, mainNums))
+              dispatch(getAllNumbers(fromNumber))
               dispatch({ type: CONSTS.GET_ALL_MESSAGES, payload: res1.data })
             })
         }
@@ -46,28 +81,27 @@ export const sendMessage = (toNumber, fromNumber, text, mainNums) => {
       })
   }
 }
-export const getMessage = (toNumber, fromNumber, state) => {
+export const getMessage = (toNumber, fromNumber) => {
   return async dispatch => {
     const msgData = {
-      from_number: fromNumber,
-      to_number: toNumber,
-      state: state,
+      fromNumber: fromNumber,
+      toNumber: toNumber,
     }
     await axios
       .post(`${CONFIG.serverURL}/api/getmessages`, {
         msgData,
       })
       .then(res => {
+        dispatch(getAllNumbers(fromNumber))
         dispatch({ type: CONSTS.GET_ALL_MESSAGES, payload: res.data })
       })
   }
 }
-export const getAllNumbers = (fromNumber, mainNums) => {
+export const getAllNumbers = fromNumber => {
   return async dispatch => {
     await axios
       .post(`${CONFIG.serverURL}/api/getnumbers`, {
         fromNumber: fromNumber,
-        mainNums: mainNums,
       })
       .then(res => {
         dispatch({ type: CONSTS.GET_ALL_USERS, payload: res.data })

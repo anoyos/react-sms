@@ -1,3 +1,3 @@
-#### SMS
+#### React Redux Starter Template
 
-This project SMS Front-end
+This project contains a boilerplate template created from the create-react-app library and configured along with redux.

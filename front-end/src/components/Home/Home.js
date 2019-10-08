@@ -9,8 +9,10 @@ import {
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap'
 import openSocket from 'socket.io-client'
 import './Home.css'
+import axios from 'axios'
+import CONFIG from '../../constants/config'
 
-const socket = openSocket('http://157.245.235.132:8000')
+const socket = openSocket(CONFIG.socketURL)
 const Home = props => {
   const {
     numbers,
@@ -32,8 +34,10 @@ const Home = props => {
   const [setNumberToogle, updateSetNumber] = useState(false)
   const [curPhoneNum, updateSwitchPhoneNum] = useState('')
   const [adminPhoneNum, updateAdminPhoneNum] = useState('')
+  const [uploadImgName, updateuploadImgName] = useState('')
   const [userPhoneNum, updatePhoneNum] = useState([])
   const messagesEndRef = useRef(null)
+  const uploadInput = useRef(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight
@@ -51,15 +55,22 @@ const Home = props => {
           ? `+${parseInt(e.target.value)}`
           : '',
       })
-    } else updateValues({ ...values, [e.target.name]: e.target.value })
+    } else if (e.target.name === 'msgText') {
+      if (e.key === 'Enter') {
+        sendMessage()
+      } else {
+        updateValues({ ...values, [e.target.name]: e.target.value })
+      }
+    }
   }
+
   const selectPhoneNumber = e => {
     updateSwitchPhoneNum(e.target.id)
   }
   const saveUserPhoneNum = () => {
-    updateAdminPhoneNum(curPhoneNum)
-    getAllNumbers(curPhoneNum, mainNums)
     saveUserNumber(curPhoneNum, userName.userEmail)
+    updateAdminPhoneNum(curPhoneNum)
+    getAllNumbers(curPhoneNum)
     changeSetNumberModal()
   }
   const changeSetNumberModal = () => {
@@ -76,20 +87,30 @@ const Home = props => {
         values.phoneNum,
         adminPhoneNum,
         values.msgText,
-        mainNums,
+        userName.fullName,
+        uploadImgName,
       )
+      uploadInput.current.value = ''
       updateValues({ ...values, msgText: '' })
+      updateuploadImgName('')
     }
+  }
+  const imageUpload = ev => {
+    ev.preventDefault()
+    const data = new FormData()
+    data.append('file', uploadInput.current.files[0])
+    axios
+      .post(`${CONFIG.serverURL}/api/fileupload`, data, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      })
+      .then(response => {
+        updateuploadImgName(response.data.file)
+      })
   }
   const setMemNumber = number => {
     updateValues({ ...values, phoneNum: number })
-    if (mainNums.includes(number)) {
-      getMessage(number, adminPhoneNum, true)
-    } else {
-      getMessage(number, adminPhoneNum, false)
-    }
+    getMessage(number, adminPhoneNum)
   }
-
   const convertDateTime = time => {
     const date = new Date(time)
     let year = date.getFullYear()
@@ -109,14 +130,21 @@ const Home = props => {
   const changeToNumber = e => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      if (mainNums.includes(values.phoneNum))
-        getMessage(values.phoneNum, adminPhoneNum, true)
-      else {
-        getMessage(values.phoneNum, adminPhoneNum, false)
-      }
+      getMessage(values.phoneNum, adminPhoneNum)
     }
   }
-
+  const inComingMssage = (fromNumber, toNumber) => {
+    socket.on('incomMessage', data => {
+      if (data.state === 'success') {
+        if (data.toNumber === fromNumber) {
+          getAllNumbers(data.toNumber)
+        }
+        if (data.toNumber === toNumber) {
+          getMessage(data.fromNumber, data.toNumber)
+        }
+      }
+    })
+  }
   useEffect(() => {
     updatePhoneNum(numbers.numberList)
   }, [numbers.numberList])
@@ -126,27 +154,16 @@ const Home = props => {
       updateSetNumber(false)
       updateSwitchPhoneNum(numbers.savedNumber)
       updateAdminPhoneNum(numbers.savedNumber)
-      getAllNumbers(numbers.savedNumber, mainNums)
+      getAllNumbers(numbers.savedNumber)
     }
   }, [numbers.savedNumber])
 
-  socket.on('incomMessage', data => {
-    if (data.state === 'success') {
-      getAllNumbers(data.fromNumber, mainNums)
-      if (data.toNumber === values.phoneNum) {
-        if (mainNums.includes(data.toNumber)) {
-          getMessage(data.toNumber, data.fromNumber, true)
-        } else {
-          getMessage(data.toNumber, data.fromNumber, false)
-        }
-      }
-    }
-  })
   useEffect(() => {
     if (!numbers.savedNumber || !adminPhoneNum) {
-      changeSetNumberModal()
+      updateSetNumber(true)
     }
-  }, [])
+    inComingMssage(adminPhoneNum, values.phoneNum)
+  }, [adminPhoneNum])
 
   return (
     <div className="dark">
@@ -159,7 +176,7 @@ const Home = props => {
           <i className="ti-settings"></i> Settings
         </ModalHeader>
         <ModalBody>
-          <span className="tab-title">Please select your Phone Number.</span>
+          <span className="tab-title">Please select default number.</span>
           <div className="tab-content">
             <div className="tab-pane show active" id="account" role="tabpanel">
               {userPhoneNum &&
@@ -289,7 +306,8 @@ const Home = props => {
               <div className="sidebar-body">
                 <ul className="list-group list-group-flush">
                   {members &&
-                    members.map((member, i) => (
+                    members.members &&
+                    members.members.map((member, i) => (
                       <li
                         key={i}
                         className={`list-group-item ${
@@ -308,6 +326,19 @@ const Home = props => {
                         </figure>
                         <div className="users-list-body">
                           <h5>{member.memberNum}</h5>
+                          {members.notifies &&
+                            members.notifies.map((notify, i) => {
+                              if (notify.number === member.memberNum) {
+                                return (
+                                  <div key={i} className="users-list-action">
+                                    <div className="new-message-count">
+                                      {notify.newMsg}
+                                    </div>
+                                  </div>
+                                )
+                              }
+                              return true
+                            })}
                         </div>
                       </li>
                     ))}
@@ -355,22 +386,83 @@ const Home = props => {
                           key={index}
                           className="message-item outgoing-message"
                         >
-                          <div className="message-content">{message.text}</div>
-                          <div className="message-action">
-                            {convertDateTime(message.createdAt)}
-                            <i className="ti-double-check"></i>
-                          </div>
+                          {mainNums.includes(adminPhoneNum) ||
+                          mainNums.includes(values.phoneNum) ? (
+                            <div className="message-action">
+                              From: {message.sender}
+                            </div>
+                          ) : (
+                            ''
+                          )}
+                          {message.text ? (
+                            <div className="message-content">
+                              {message.text}
+                            </div>
+                          ) : (
+                            ''
+                          )}
+                          {message.media ? (
+                            <div className="message-content mt-2">
+                              <a href={message.media}>
+                                <img
+                                  src={message.media}
+                                  className="img-view"
+                                  alt="download"
+                                />
+                              </a>
+                            </div>
+                          ) : (
+                            ''
+                          )}
+
+                          {message.state === '1' ? (
+                            <div className="message-action">
+                              {convertDateTime(message.createdAt)}
+                              <i className="ti-double-check"></i>
+                            </div>
+                          ) : (
+                            <div className="message-action">
+                              {convertDateTime(message.createdAt)}
+                              <i className="ti-check"></i>
+                            </div>
+                          )}
                         </div>
                       )
-                    }
-                    if (
+                    } else if (
                       values.phoneNum === message.from_number &&
                       adminPhoneNum === message.to_number &&
                       message.direction === 'in'
                     ) {
                       return (
                         <div key={index} className="message-item">
-                          <div className="message-content">{message.text}</div>
+                          {mainNums.includes(adminPhoneNum) ||
+                          mainNums.includes(values.phoneNum) ? (
+                            <div className="message-action">
+                              To: {message.to_number}
+                            </div>
+                          ) : (
+                            ''
+                          )}
+                          {message.text ? (
+                            <div className="message-content">
+                              {message.text}
+                            </div>
+                          ) : (
+                            ''
+                          )}
+                          {message.media ? (
+                            <div className="message-content mt-2">
+                              <a href={message.media}>
+                                <img
+                                  src={message.media}
+                                  className="img-view"
+                                  alt="download"
+                                />
+                              </a>
+                            </div>
+                          ) : (
+                            ''
+                          )}
                           <div className="message-action">
                             {convertDateTime(message.createdAt)}
                           </div>
@@ -382,14 +474,36 @@ const Home = props => {
               </div>
             </div>
             <div className="chat-footer">
+              <div className="sender">
+                {adminPhoneNum ? (
+                  <div>
+                    Sending via:{' '}
+                    <span onClick={changeSetNumberModal}>{adminPhoneNum}</span>
+                  </div>
+                ) : (
+                  ''
+                )}
+              </div>
               <div className="chat-footer-form">
+                <div className="chat-image-upload">
+                  <label id="#bb">
+                    <i className="ti-clip"></i>
+                    <input
+                      type="file"
+                      ref={uploadInput}
+                      onChange={imageUpload}
+                    />
+                  </label>
+                </div>
                 <input
                   type="text"
                   name="msgText"
                   className="form-control"
                   placeholder="Message"
                   onChange={handleChange}
+                  onKeyPress={handleChange}
                   value={values.msgText}
+                  accept="image/*"
                 />
                 <div className="form-buttons">
                   <button
@@ -400,6 +514,7 @@ const Home = props => {
                   </button>
                 </div>
               </div>
+              <div className="message-action">{uploadImgName}</div>
             </div>
           </div>
         </div>
@@ -416,16 +531,16 @@ const mapStateToProps = state => ({
   members: state.message.members,
 })
 const mapDispatchToProps = dispatch => ({
-  sendMessage: (toNumber, fromNumber, msgText, mainNums) =>
-    dispatch(sendMessage(toNumber, fromNumber, msgText, mainNums)),
-  getMessage: (toNumber, fromNumber, state) => {
-    dispatch(getMessage(toNumber, fromNumber, state))
+  sendMessage: (toNumber, fromNumber, msgText, sender, uploadImgName) =>
+    dispatch(sendMessage(toNumber, fromNumber, msgText, sender, uploadImgName)),
+  getMessage: (toNumber, fromNumber) => {
+    dispatch(getMessage(toNumber, fromNumber))
   },
   saveUserNumber: (fromNumber, email) => {
     dispatch(saveUserNumber(fromNumber, email))
   },
-  getAllNumbers: (fromNumber, mainNums) => {
-    dispatch(getAllNumbers(fromNumber, mainNums))
+  getAllNumbers: fromNumber => {
+    dispatch(getAllNumbers(fromNumber))
   },
 })
 export default connect(

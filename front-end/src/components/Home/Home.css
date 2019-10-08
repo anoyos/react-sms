@@ -44,6 +44,8 @@
   .users-list-body
   .users-list-action {
   background-color: #464852;
+  display: flex;
+  align-items: center;
   -webkit-box-shadow: -8px 1px 10px 5px #464852;
   -moz-box-shadow: -8px 1px 10px 5px #464852;
   box-shadow: -8px 1px 10px 5px #464852;
@@ -908,7 +910,7 @@
 
 .layout .content .chat .chat-footer {
   border-top: 2px solid #e1e1e1;
-  padding-top: 20px;
+  padding-top: 15px;
 }
 
 .layout .content .chat .chat-footer .chat-footer-form {
@@ -1370,4 +1372,42 @@ figure.avatar.avatar-state-dark:before {
 
 .tab-title {
   font-size: 16px;
+}
+.input-message {
+  width: 100%;
+  min-height: 50px;
+  max-height: 100px;
+  overflow: auto;
+  padding: 9px;
+  resize: none;
+}
+.sender {
+  color: #828282;
+  margin-bottom: 15px;
+  font-size: 15px;
+}
+.sender span:hover {
+  color: #e6e6e6;
+  cursor: pointer;
+}
+.chat-footer-form i {
+  font-size: 18px;
+}
+.chat-footer-form i:hover {
+  font-size: 20px;
+}
+input[type='file'] {
+  display: none;
+}
+.chat-image-upload {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.chat-image-upload label {
+  margin-bottom: 0px;
+}
+.message-content .img-view {
+  width: 200px;
+  height: 200px;
 }
