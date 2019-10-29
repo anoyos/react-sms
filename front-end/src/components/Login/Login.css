@@ -20,7 +20,8 @@
 }
 
 .form-membership .form-wrapper .logo {
-  background-color: white;
+  background: url(../../asset/media/img/VentureTel-SMS-Logo.png) no-repeat;
+  background-size: 100%;
   width: 100px;
   -webkit-border-radius: 50%;
   -moz-border-radius: 50%;
@@ -78,7 +79,7 @@
   line-height: 25px;
 }
 
-.custom-control-input:checked~.custom-control-label::before {
+.custom-control-input:checked ~ .custom-control-label::before {
   background-color: #3db16b;
   border-color: #3db16b;
 }

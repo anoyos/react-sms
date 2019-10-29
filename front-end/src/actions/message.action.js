@@ -67,11 +67,10 @@ export const sendMessage = (
           }
 
           axios
-            .post(`${CONFIG.serverURL}/api/sendmessage`, {
+            .post(`${CONFIG.serverURL}/sendmessage`, {
               sendMsgData,
             })
             .then(res1 => {
-              dispatch(getAllNumbers(fromNumber))
               dispatch({ type: CONSTS.GET_ALL_MESSAGES, payload: res1.data })
             })
         }
@@ -81,27 +80,28 @@ export const sendMessage = (
       })
   }
 }
-export const getMessage = (toNumber, fromNumber) => {
+export const getMessage = (toNumber, fromNumber, fromNums) => {
   return async dispatch => {
     const msgData = {
       fromNumber: fromNumber,
       toNumber: toNumber,
+      fromNums: fromNums,
     }
     await axios
-      .post(`${CONFIG.serverURL}/api/getmessages`, {
+      .post(`${CONFIG.serverURL}/getmessages`, {
         msgData,
       })
       .then(res => {
-        dispatch(getAllNumbers(fromNumber))
         dispatch({ type: CONSTS.GET_ALL_MESSAGES, payload: res.data })
+        dispatch(getAllNumbers(fromNumber))
       })
   }
 }
-export const getAllNumbers = fromNumber => {
+export const getAllNumbers = userNumber => {
   return async dispatch => {
     await axios
-      .post(`${CONFIG.serverURL}/api/getnumbers`, {
-        fromNumber: fromNumber,
+      .post(`${CONFIG.serverURL}/getnumbers`, {
+        userNumber: userNumber,
       })
       .then(res => {
         dispatch({ type: CONSTS.GET_ALL_USERS, payload: res.data })
@@ -111,12 +111,34 @@ export const getAllNumbers = fromNumber => {
 export const saveUserNumber = (userNumber, userEmail) => {
   return async dispatch => {
     await axios
-      .post(`${CONFIG.serverURL}/api/saveusernumber`, {
+      .post(`${CONFIG.serverURL}/saveusernumber`, {
         phoneNumber: userNumber,
         email: userEmail,
       })
       .then(res => {
         dispatch({ type: CONSTS.GET_ALL_USERS, payload: res.data })
       })
+  }
+}
+export const sendContact = data => {
+  return async dispatch => {
+    await axios.post(`${CONFIG.serverURL}/sendcontact`, data).then(res => {
+      console.log(res)
+    })
+  }
+}
+
+export const setMemberNum = data => {
+  return async dispatch => {
+    dispatch({ type: CONSTS.SET_MEM_NUMBER, payload: data })
+  }
+}
+export const newMssage = data => {
+  return (dispatch, getState) => {
+    const { message } = getState()
+    const { mem_number, numbers } = message
+    if (data.fromNumber === mem_number) {
+      dispatch(getMessage(data.fromNumber, data.toNumber, numbers.numberList))
+    }
   }
 }

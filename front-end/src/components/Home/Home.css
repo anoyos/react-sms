@@ -408,6 +408,7 @@
   -ms-flex-pack: justify;
   justify-content: space-between;
   padding: 20px;
+  margin-top: 18px;
   height: 80px;
   font-weight: 700;
   -webkit-border-radius: 0;
@@ -418,8 +419,9 @@
 .layout .content .sidebar-group .sidebar > header > span {
   font-size: 22px;
 }
-.layout .content .sidebar-group .sidebar > header > button {
-  opacity: 0;
+.layout .content .sidebar-group .sidebar > button {
+  position: absolute;
+  display: none;
 }
 .layout .content .sidebar-group .sidebar > header ul {
   margin-bottom: 0;
@@ -460,7 +462,7 @@
   -moz-box-flex: 1;
   -ms-flex: 1;
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
 }
 
 .layout .content .sidebar-group .sidebar .list-group-item {
@@ -503,7 +505,12 @@
 .layout .content .sidebar-group .sidebar .list-group-item figure {
   margin-right: 1rem;
 }
-
+.layout .content .sidebar-group .sidebar .list-group-item:first-child {
+  border-top: 1px solid #5a5c66 !important;
+}
+.layout .content .sidebar-group .sidebar .list-group-item:last-child {
+  border-bottom: 1px solid #5a5c66 !important;
+}
 .layout .content .sidebar-group .sidebar .list-group-item .users-list-body {
   -webkit-box-flex: 1;
   -webkit-flex: 1;
@@ -703,12 +710,11 @@
   -moz-box-flex: 1;
   -ms-flex: 1;
   flex: 1;
-  margin: 20px 0;
-  padding: 0px 10px;
+  margin: 10px 0;
 }
 
 .layout .content .chat .chat-body:not(.no-message) {
-  overflow: auto;
+  overflow: hidden;
 }
 
 .layout .content .chat .chat-body.no-message {
@@ -773,6 +779,7 @@
   -moz-box-align: start;
   -ms-flex-align: start;
   align-items: flex-start;
+  padding: 0 10px;
 }
 
 .layout .content .chat .chat-body .messages .message-item {
@@ -1019,19 +1026,10 @@ nav.navigation ul li span.active {
 
 nav.navigation ul li span.logo {
   margin-bottom: 1rem;
-  background-color: #3db16b;
-}
-
-nav.navigation ul li span.logo svg path {
-  fill: rgba(255, 255, 255, 0.7);
-}
-
-nav.navigation ul li span.logo svg circle {
-  fill: rgba(255, 255, 255, 0.7);
-}
-
-nav.navigation ul li span.logo i {
-  font-size: 26px;
+  /* background-color: #3db16b; */
+  background: url('../../asset/media/img/VentureTel-SMS-Logo.jpg') no-repeat;
+  background-size: 100%;
+  height: 70px;
 }
 
 nav.navigation ul li span.logo:hover,
@@ -1056,18 +1054,39 @@ nav.navigation ul li.brackets {
   flex: 1;
 }
 
-@media screen and (max-width: 1200px) {
+@media screen and (min-width: 993px) {
+  .sidebar-group {
+    opacity: 1;
+    -webkit-transition: all 0.5s;
+    -o-transition: all 0.5s;
+    -moz-transition: all 0.5s;
+    transition: all 0.5s;
+    visibility: visible;
+  }
+
+  .sidebar-group.open {
+    display: none !important;
+    transition: opacity 1s ease-out;
+    -webkit-transition: all 0.5s;
+    -o-transition: all 0.5s;
+    -moz-transition: all 0.5s;
+    transition: all 0.5s;
+    opacity: 0;
+  }
+}
+
+@media screen and (max-width: 992px) {
   .sidebar-group {
     position: fixed;
     right: -50%;
     top: 0;
     bottom: 0;
-    width: 30%;
+    width: 40%;
     opacity: 0;
-    -webkit-transition: all 0.2s;
-    -o-transition: all 0.2s;
-    -moz-transition: all 0.2s;
-    transition: all 0.2s;
+    -webkit-transition: all 0.5s;
+    -o-transition: all 0.5s;
+    -moz-transition: all 0.5s;
+    transition: all 0.5s;
     -webkit-box-shadow: 25px 0px 30px 5px black;
     -moz-box-shadow: 25px 0px 30px 5px black;
     box-shadow: 25px 0px 30px 5px black;
@@ -1078,6 +1097,10 @@ nav.navigation ul li.brackets {
     z-index: 1;
     right: 0;
     opacity: 1;
+    -webkit-transition: all 0.5s;
+    -o-transition: all 0.5s;
+    -moz-transition: all 0.5s;
+    transition: all 0.5s;
     visibility: visible;
   }
 
@@ -1089,7 +1112,11 @@ nav.navigation ul li.brackets {
     -moz-border-radius: 0 !important;
     border-radius: 0 !important;
   }
-  .sidebar-group .sidebar > header > button {
+  .sidebar-group .sidebar > button {
+    display: block !important;
+    position: absolute;
+    top: 10px;
+    right: 17px;
     opacity: 1 !important;
   }
   .sidebar-group.mobile-open {
@@ -1099,15 +1126,9 @@ nav.navigation ul li.brackets {
   }
 }
 
-@media screen and (max-width: 992px) {
-  .sidebar-group {
-    width: 45%;
-  }
-}
-
 @media screen and (max-width: 768px) {
   .sidebar-group {
-    width: 75%;
+    width: 60%;
   }
 
   .sidebar-group .sidebar .list-group-item .users-list-body h5 {
@@ -1138,7 +1159,7 @@ nav.navigation ul li.brackets {
 
 @media screen and (max-width: 576px) {
   .sidebar-group {
-    width: 80;
+    width: 70%;
   }
 }
 
@@ -1410,4 +1431,8 @@ input[type='file'] {
 .message-content .img-view {
   width: 200px;
   height: 200px;
+}
+.converstaion {
+  background-color: #5a5c66;
+  border-color: #aaacb6;
 }

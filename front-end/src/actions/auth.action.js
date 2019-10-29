@@ -33,7 +33,7 @@ export const getNewAuthToken = (username, password, accountname) => {
           ])
           .then(
             axios.spread((device_num, userData, callflows) => {
-              const mainNums = callflows.data.data.filter(
+              let mainNums = callflows.data.data.filter(
                 nums => nums.type === 'main' && nums.name === 'MainCallflow',
               )[0].numbers
 
@@ -47,18 +47,23 @@ export const getNewAuthToken = (username, password, accountname) => {
                 userData.data.data.first_name +
                 ' ' +
                 userData.data.data.last_name
+
+              mainNums.forEach(num => {
+                if (num !== '0' && num !== 'undefinedMainNumber') {
+                  phone_num.push(num)
+                }
+              })
+              if (mainNums[0] === 'undefinedMainNumber') {
+                mainNums = []
+              }
               let user_data = {
                 fullName: full_name,
                 userEmail: userData.data.data.email,
                 mainNums: mainNums,
               }
-              mainNums.forEach(num => {
-                if (num !== '0') {
-                  phone_num.push(num)
-                }
-              })
+
               axios
-                .post(`${CONFIG.serverURL}/api/userchk`, {
+                .post(`${CONFIG.serverURL}/userchk`, {
                   email: userData.data.data.email,
                 })
                 .then(res => {

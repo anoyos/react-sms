@@ -2,7 +2,6 @@
   "API_URL": "https://ny-kz-02.venturetel.co:8443/v2",
   "Mssgae_URL": "https://messaging.bandwidth.com/api/v2",
   "corsURL": "https://cors-anywhere.herokuapp.com/",
-  "serverURL": "http://localhost:8080",
   "accountId": "u-ihab555uwbhclldnatyc7py",
   "apiToken": "d29b09d8168ab3b56e307a1acfa0ac4cd20cffb4bc4c612a",
   "apiSecret": "01c698a545f2fa156dd1341fcc0166a1e798916fd0b1a8a2",

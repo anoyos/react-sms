@@ -6,7 +6,6 @@ import Login from './Login/Login'
 import Home from './Home/Home'
 import authenticate from './common/Authenticate'
 import './App.css'
-// import CONFIG from '../constants/config'
 
 class App extends Component {
   constructor(props) {

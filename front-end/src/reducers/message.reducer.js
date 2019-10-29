@@ -1,6 +1,12 @@
 import * as CONSTS from '../constants/const'
 
-let defaultState = { numbers: [], userName: [], messages: [], members: [] }
+let defaultState = {
+  numbers: [],
+  userName: [],
+  messages: [],
+  members: [],
+  mem_number: '',
+}
 
 export default (state = defaultState, action) => {
   switch (action.type) {
@@ -12,6 +18,8 @@ export default (state = defaultState, action) => {
       return { ...state, messages: action.payload }
     case CONSTS.GET_ALL_USERS:
       return { ...state, members: action.payload }
+    case CONSTS.SET_MEM_NUMBER:
+      return { ...state, mem_number: action.payload }
     default:
       return state
   }

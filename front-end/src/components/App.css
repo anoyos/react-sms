@@ -2464,3 +2464,42 @@ a.btn:hover[href="#previous"] {
   -o-transform: translate(0, 0) scale(1);
   transform: translate(0, 0) scale(1);
 }
+.contact input[type='text'],
+.contact textarea,
+.contact select {
+  background-color: #5a5c66;
+  color: rgba(255, 255, 255, 0.7);
+  border-color: #6e707a;
+}
+
+.contact input[type='text']:focus,
+.contact textarea:focus,
+.contact select:focus {
+  color: rgba(255, 255, 255, 0.7);
+  background-color: #5a5c66;
+  border-color: #aaacb6;
+}
+
+.contact input[type='text']::-webkit-input-placeholder,
+.contact textarea::-webkit-input-placeholder,
+.contact select::-webkit-input-placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.contact input[type='text']::-moz-placeholder,
+.contact textarea::-moz-placeholder,
+.contact select::-moz-placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.contact input[type='text']::-ms-input-placeholder,
+.contact textarea::-ms-input-placeholder,
+.contact select::-ms-input-placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.contact input[type='text']::placeholder,
+.contact textarea::placeholder,
+.contact select::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
