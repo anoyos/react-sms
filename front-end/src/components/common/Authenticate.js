@@ -9,13 +9,15 @@ export default function authenticate(Component) {
     }
 
     checkAuth() {
-      if (!this.props.auth_token) {
+      if (!this.props.auth_token && !localStorage.getItem('token')) {
         this.props.history.push('/')
       }
     }
 
     render() {
-      return this.props.auth_token ? <Component {...this.props} /> : null
+      return this.props.auth_token || localStorage.getItem('token') ? (
+        <Component {...this.props} />
+      ) : null
     }
   }
 
