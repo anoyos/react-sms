@@ -13,21 +13,28 @@ class Login extends React.Component {
       accountname: '',
     }
   }
+
   componentDidUpdate(preProps) {
-    let { auth_token, auth_fail } = this.props.auth
+    let { auth_token, auth_fail, auth } = this.props.auth
     if (auth_token !== preProps.auth.auth_token) {
       if (auth_token) {
+        let account_id = auth.data.account_id
+        let user_id = auth.data.owner_id
         localStorage.setItem('token', auth_token)
-        localStorage.setItem('currentPhoneNum', '')
+        localStorage.setItem('account_id', account_id)
+        localStorage.setItem('user_id', user_id)
+
         this.props.history.push('/home')
       }
     }
+
     if (this.props !== preProps) {
       if (auth_fail) {
         this.loginFail()
       }
     }
   }
+
   handleChange = e => {
     if (e.key === 'Enter') {
       this.submit()
@@ -116,7 +123,4 @@ const mapDispatchToProps = dispatch => ({
   getNewAuthToken: (username, password, accountname) =>
     dispatch(getNewAuthToken(username, password, accountname)),
 })
-export default connect(
-  mapStateToProps,
-  mapDispatchToProps,
-)(Login)
+export default connect(mapStateToProps, mapDispatchToProps)(Login)

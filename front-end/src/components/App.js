@@ -4,6 +4,9 @@ import axios from 'axios'
 import { Route, withRouter } from 'react-router-dom'
 import Login from './Login/Login'
 import Home from './Home/Home'
+import History from './CallHistory/History'
+import Voicemails from './Voicemails/Voicemails'
+import VoicemailsList from './Voicemails/VoicemailsList'
 import authenticate from './common/Authenticate'
 import './App.css'
 
@@ -28,6 +31,14 @@ class App extends Component {
       <div>
         <Route exact path="/" component={Login} />
         <Route exact path="/home" component={authenticate(Home)} />
+        <Route exact path="/callhistory" component={authenticate(History)} />
+
+        <Route
+          exact
+          path="/voicemails/list/:vmbox_id"
+          component={authenticate(VoicemailsList)}
+        />
+        <Route exact path="/voicemails" component={authenticate(Voicemails)} />
       </div>
     )
   }
