@@ -10,6 +10,10 @@ var UserSchema = new Schema(
     phoneNumber: {
       type: String,
       default: ""
+    },
+    style_mode: {
+      type: String,
+      default: "dark"
     }
   },
   {
