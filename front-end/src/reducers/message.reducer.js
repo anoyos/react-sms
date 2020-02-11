@@ -6,6 +6,7 @@ let defaultState = {
   messages: [],
   members: [],
   mem_number: '',
+  notification: { state: false, fromNumber: '' },
 }
 
 export default (state = defaultState, action) => {
@@ -20,6 +21,9 @@ export default (state = defaultState, action) => {
       return { ...state, members: action.payload }
     case CONSTS.SET_MEM_NUMBER:
       return { ...state, mem_number: action.payload }
+    case CONSTS.SMS_NOTIFICATION:
+      return { ...state, notification: action.payload }
+
     default:
       return state
   }
