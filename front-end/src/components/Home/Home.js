@@ -1,20 +1,44 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { connect } from 'react-redux'
-import { withRouter } from 'react-router-dom'
 import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import PerfectScrollbar from 'react-perfect-scrollbar'
 import { ToastContainer, toast } from 'react-toastify'
-import { Tooltip } from 'reactstrap'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
+import Sidebar from '../Sidebar/Sidebar'
+import Dialog from '../Sidebar/Dialog'
+import Printer from './Printer'
+import DropMenu from './DropMenu'
+import Notifications from './Notifications'
+import _ from 'lodash'
 import {
   sendMessage,
   getMessage,
   getAllNumbers,
-  saveUserNumber,
-  sendContact,
+  getPrintMessage,
   setMemberNum,
   newMssage,
+  deleteConversation,
 } from '../../actions/message.action'
-import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from 'reactstrap'
+
+import {
+  Button,
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Dropdown,
+  DropdownToggle,
+  DropdownMenu,
+  DropdownItem,
+  Tooltip,
+  TabContent,
+  TabPane,
+  Nav,
+  NavItem,
+  NavLink,
+} from 'reactstrap'
+
 import './Home.css'
 import axios from 'axios'
 import CONFIG from '../../constants/config'
@@ -22,54 +46,55 @@ import sms from '../../asset/media/img/sms.png'
 import silhoutte from '../../asset/media/img/silhoutte.png'
 import alertSound from '../../asset/media/mp3/drop.mp3'
 import openSocket from 'socket.io-client'
+import { getUserData } from '../../actions/auth.action'
+import classnames from 'classnames'
 
 const socket = openSocket(CONFIG.socketURL)
 
 const Home = props => {
   const {
+    history,
     numbers,
     userName,
     messages,
     members,
+    styleMode,
     getMessage,
+    getPrintMessage,
+    getUserData,
     getAllNumbers,
-    saveUserNumber,
-    sendContact,
     setMemberNum,
     newMssage,
+    deleteConversation,
   } = props
+
   const mainNums = userName.mainNums
   const [values, updateValues] = useState({
     phoneNum: '',
     msgText: '',
   })
-  const [contacts, updateContactInfo] = useState({
-    toMail: 'joel@tsicloud.com',
-    fromMail: '',
-    subject: 'VentureTel SMS Suggestion',
-    text: '',
-  })
   const [toogleSidebar, updateToggleSidebar] = useState(false)
+  const [printerDropdown, setPrinterDropdown] = useState(false)
+  const [printerToogle, updatePrinter] = useState(false)
   const [setNumberToogle, updateSetNumber] = useState(false)
   const [contactToogle, updateContactUs] = useState(false)
   const [conversationToogle, updateConversation] = useState(false)
   const [tooltipOpen, setTooltipOpen] = useState(false)
-  const [curPhoneNum, updateSwitchPhoneNum] = useState('')
+  const [startDate, updateStartDate] = useState(
+    new Date(new Date().setDate(new Date().getDate() - 7)),
+  )
+  const [endDate, updateEndDate] = useState(new Date())
   const [adminPhoneNum, updateAdminPhoneNum] = useState('')
   const [uploadImgName, updateuploadImgName] = useState('')
   const [userPhoneNum, updatePhoneNum] = useState([])
   const [msgNofications, updateMsgNotifications] = useState([])
   const messagesEndRef = useRef(null)
+  const messageScrollRef = useRef(null)
   const uploadInput = useRef(null)
   const [audio] = useState(new Audio(alertSound))
-  const scrollToBottom = () => {
-    messagesEndRef.current._container.scrollTop =
-      messagesEndRef.current._container.scrollHeight
-  }
+  const [favTab, updateFavTab] = useState('favTab1')
+
   const toggleTooltip = () => setTooltipOpen(!tooltipOpen)
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
 
   const handleChange = e => {
     if (e.target.name === 'phoneNum') {
@@ -87,17 +112,8 @@ const Home = props => {
       }
     }
   }
+  const printerToggle = () => setPrinterDropdown(prevState => !prevState)
 
-  const selectPhoneNumber = e => {
-    updateSwitchPhoneNum(e.target.id)
-  }
-  const saveUserPhoneNum = async () => {
-    await getAllNumbers(curPhoneNum)
-    await saveUserNumber(curPhoneNum, userName.userEmail)
-    await getMessage(values.phoneNum, curPhoneNum, numbers.numberList)
-    await updateAdminPhoneNum(curPhoneNum)
-    await changeSetNumberModal()
-  }
   const changeSetNumberModal = () => {
     updateSetNumber(!setNumberToogle)
   }
@@ -127,7 +143,10 @@ const Home = props => {
   const imageUpload = ev => {
     ev.preventDefault()
     const data = new FormData()
+    console.log(uploadInput.current.files[0])
     data.append('file', uploadInput.current.files[0])
+    console.log('data====>', data)
+
     axios
       .post(`${CONFIG.serverURL}/fileupload`, data, {
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -139,7 +158,9 @@ const Home = props => {
   const setMemNumber = async number => {
     await updateValues({ ...values, msgText: '', phoneNum: number })
     await setMemberNum(number)
-    await getMessage(number, adminPhoneNum, numbers.numberList)
+    await getMessage(number, adminPhoneNum)
+    await getAllNumbers(adminPhoneNum, userName.userEmail)
+    await getUserData()
   }
   const convertDateTime = time => {
     const date = new Date(time)
@@ -160,45 +181,14 @@ const Home = props => {
   const changeToNumber = e => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      getMessage(values.phoneNum, adminPhoneNum, numbers.numberList)
-    }
-  }
-  const logout = () => {
-    props.history.push('/')
-  }
-  const inComingMssage = data => {
-    if (adminPhoneNum && data.toNumber === adminPhoneNum) {
-      getAllNumbers(data.toNumber)
-      setTimeout(() => {
-        newMssage(data)
-      }, 2000)
+      getMessage(values.phoneNum, adminPhoneNum)
     }
   }
 
-  const onhandleContacts = e => {
-    updateContactInfo({
-      ...contacts,
-      [e.target.name]: e.target.value,
-    })
+  const inComingMssage = data => {
+    newMssage(data, userName.userEmail)
   }
-  const sendContacts = () => {
-    if (
-      contacts.toMail &&
-      contacts.fromMail &&
-      contacts.subject &&
-      contacts.text
-    ) {
-      sendContact(contacts)
-    }
-    contactUsModal()
-    updateContactInfo({
-      ...contacts,
-      toMail: 'joel@tsicloud.com',
-      fromMail: '',
-      subject: 'VentureTel SMS Suggestion',
-      text: '',
-    })
-  }
+
   const conversationModal = () => {
     if (!conversationToogle) {
       updateValues({ ...values, phoneNum: '' })
@@ -234,39 +224,143 @@ const Home = props => {
       return phoneNumber
     } else return number
   }
+  const printerModal = () => {
+    updatePrinter(!printerToogle)
+    getPrintMessage(
+      values.phoneNum,
+      numbers.savedNumber,
+      setFormatDate(startDate, 'start'),
+      setFormatDate(endDate, 'end'),
+    )
+  }
+  const exportPDF = async () => {
+    // const doc = new jsPDF('p', 'mm')
+    // console.log(document.getElementsByClassName('messages')[0])
+    // doc.addHTML($('#ElementYouWantToConvertToPdf')[0], function() {
+    //   pdf.save('Test.pdf')
+    // })
+    // const specialElementHandlers = {
+    //   '#end-message': function(element, renderer) {
+    //     return true
+    //   },
+    // }
+    // doc.fromHTML(document.getElementsByClassName('messages')[0], 15, 15, {
+    //   width: 190,
+    //   elementHandlers: specialElementHandlers,
+    // })
+    // doc.save('sample-page.pdf')
+    html2canvas(document.getElementsByClassName('messages')[0], {
+      scale: 3,
+    }).then(canvas => {
+      const imgData = canvas.toDataURL('image/jpeg')
+      const imgWidth = 210
+      const pageHeight = 295
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+      const doc = new jsPDF('p', 'mm')
+      let position = 0
+      doc.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
+        doc.addPage()
+        doc.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+      doc.save(`message-${formatDate(startDate)}_${formatDate(endDate)}.pdf`)
+    })
+    updatePrinter(!printerToogle)
+    getMessage(values.phoneNum, adminPhoneNum)
+  }
+  const startDateChange = date => {
+    updateStartDate(date)
+    getPrintMessage(
+      values.phoneNum,
+      numbers.savedNumber,
+      setFormatDate(date, 'start'),
+      setFormatDate(endDate, 'end'),
+    )
+  }
+
+  const endDateChange = date => {
+    updateEndDate(date)
+    getPrintMessage(
+      values.phoneNum,
+      numbers.savedNumber,
+      setFormatDate(startDate, 'start'),
+      setFormatDate(date, 'end'),
+    )
+  }
+  const setFormatDate = (date, type) => {
+    let formatted_date = null
+    if (type === 'start') {
+      formatted_date = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+        0,
+        0,
+        0,
+        0,
+      )
+    }
+    if (type === 'end') {
+      formatted_date = new Date(
+        date.getFullYear(),
+        date.getMonth(),
+        date.getDate(),
+        23,
+        59,
+        59,
+        999,
+      )
+    }
+    return formatted_date
+  }
+  const formatDate = date => {
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    let formattedDate = year + '-' + month + '-' + day
+    return formattedDate
+  }
+  const deleteHistory = () => {
+    deleteConversation(values.phoneNum, adminPhoneNum, userName.userEmail)
+  }
+
+  const favTabToggole = tab => {
+    if (favTab !== tab) updateFavTab(tab)
+  }
 
   useEffect(() => {
-    if (numbers && numbers.savedNumber) {
-      updateSetNumber(false)
-      getAllNumbers(numbers.savedNumber)
-      updateSwitchPhoneNum(numbers.savedNumber)
-      updateAdminPhoneNum(numbers.savedNumber)
-      getMessage(values.phoneNum, numbers.savedNumber, numbers.numberList)
+    if (messages.length > 0) {
+      messagesEndRef.current.scrollIntoView()
     }
-    if (numbers && numbers.numberList) {
+  }, [messages])
+
+  useEffect(() => {
+    if (numbers.numberList) {
       updatePhoneNum(numbers.numberList)
-      if (adminPhoneNum) getAllNumbers(adminPhoneNum)
     }
-  }, [numbers])
+  }, [numbers.numberList])
 
   useEffect(() => {
-    if (!numbers.savedNumber || !adminPhoneNum) {
+    if (numbers.savedNumber) {
+      updateAdminPhoneNum(numbers.savedNumber)
+      getMessage(values.phoneNum, numbers.savedNumber)
+      getAllNumbers(numbers.savedNumber, userName.userEmail)
+      updateSetNumber(false)
+    } else {
       updateSetNumber(true)
     }
-    if (userPhoneNum) {
-      socket.on('incomMessage', data => {
-        if (data.state === 'success') {
-          inComingMssage(data)
-        }
-      })
-    }
-  }, [userPhoneNum])
+  }, [numbers.savedNumber])
 
   useEffect(() => {
     if (members && !members.notifies) {
       updateMsgNotifications([])
     } else {
-      if (JSON.stringify(members.notifies) !== JSON.stringify(msgNofications)) {
+      const dif = _.differenceWith(members.notifies, msgNofications, _.isEqual)
+      if (dif.length > 0) {
         updateMsgNotifications(members.notifies)
       }
     }
@@ -283,6 +377,11 @@ const Home = props => {
   }, [msgNofications])
 
   useEffect(() => {
+    socket.on('incomMessage', data => {
+      if (data.state === 'success') {
+        inComingMssage(data)
+      }
+    })
     window.dataLayer = window.dataLayer || []
     function gtag() {
       window.dataLayer.push(arguments)
@@ -292,100 +391,21 @@ const Home = props => {
   }, [])
 
   return (
-    <div className="dark">
+    <div className={styleMode}>
       <ToastContainer autoClose={8000} />
-      <Modal
-        isOpen={setNumberToogle}
-        toggle={changeSetNumberModal}
-        className="modal-dialog modal-dialog-centered modal-dialog-zoom"
-      >
-        <ModalHeader toggle={changeSetNumberModal}>
-          <i className="ti-settings"></i> Settings
-        </ModalHeader>
-        <ModalBody>
-          <span className="tab-title">Please select default number.</span>
-          <div className="tab-content">
-            <div className="tab-pane show active" id="account" role="tabpanel">
-              {userPhoneNum &&
-                userPhoneNum.map((number, i) => (
-                  <div
-                    className="form-item custom-control custom-switch"
-                    key={i}
-                  >
-                    <input
-                      type="checkbox"
-                      className="custom-control-input"
-                      id={number}
-                      checked={number === curPhoneNum}
-                      onChange={selectPhoneNumber}
-                    />
-                    <label className="custom-control-label" htmlFor={number}>
-                      {phoneNumFormat(number)}
-                    </label>
-                  </div>
-                ))}
-            </div>
-          </div>
-        </ModalBody>
-        <ModalFooter>
-          <Button color="primary" onClick={saveUserPhoneNum}>
-            Save
-          </Button>
-        </ModalFooter>
-      </Modal>
-      <Modal
-        isOpen={contactToogle}
-        toggle={contactUsModal}
-        className="modal-dialog modal-dialog-centered modal-dialog-zoom"
-      >
-        <ModalHeader toggle={contactUsModal}>
-          <i className="ti-pencil-alt"></i> Feature Request
-        </ModalHeader>
-        <ModalBody>
-          <div className="contact">
-            <span>
-              We welcome your feedback and suggestions to make this app and your
-              business communications better. Please let us know of features or
-              suggestions that would help make this product better. We'll do our
-              best to make it possible. We're building our services around our
-              clients needs, and so your feedback and suggestions are very
-              important to us!
-            </span>
-
-            <div className="input-group mt-2">
-              <div className="input-group mt-2">
-                <input
-                  type="text"
-                  name="fromMail"
-                  value={contacts.fromMail}
-                  className="form-control"
-                  placeholder="Your Mail Address"
-                  onChange={onhandleContacts}
-                />
-              </div>
-            </div>
-            <div className="input-group mt-2">
-              <textarea
-                className="form-control"
-                id="about-text"
-                name="text"
-                value={contacts.text}
-                placeholder="Text"
-                onChange={onhandleContacts}
-              ></textarea>
-            </div>
-          </div>
-        </ModalBody>
-        <ModalFooter>
-          <Button color="primary" onClick={sendContacts}>
-            Send
-          </Button>
-        </ModalFooter>
-      </Modal>
+      <Notifications />
+      <Dialog
+        setNumberToogle={setNumberToogle}
+        changeSetNumberModal={changeSetNumberModal}
+        contactUsModal={contactUsModal}
+        contactToogle={contactToogle}
+        changeToNumber={changeToNumber}
+        values={values}
+      />
       <Modal
         isOpen={conversationToogle}
         toggle={conversationModal}
-        className="modal-dialog modal-dialog-centered modal-dialog-zoom"
+        className={`${styleMode}-modal modal-dialog modal-dialog-centered modal-dialog-zoom`}
       >
         <ModalHeader toggle={conversationModal}>
           <i className="ti-comment-alt"></i> New Conversation
@@ -423,40 +443,13 @@ const Home = props => {
         </ModalFooter>
       </Modal>
       <div className="layout">
-        <nav className="navigation">
-          <div className="nav-group">
-            <ul>
-              <li>
-                <span className="logo"></span>
-              </li>
-              <li className="brackets">
-                <span
-                  data-navigation-target="chats"
-                  onClick={changeSidebar}
-                  className={toogleSidebar ? 'active' : ''}
-                >
-                  <i className="ti-menu-alt"></i>
-                </span>
-              </li>
-
-              <li>
-                <span onClick={contactUsModal}>
-                  <i className="ti-pencil-alt"></i>
-                </span>
-              </li>
-              <li>
-                <span onClick={changeSetNumberModal}>
-                  <i className="ti-settings"></i>
-                </span>
-              </li>
-              <li onClick={logout}>
-                <span>
-                  <i className="ti-power-off"></i>
-                </span>
-              </li>
-            </ul>
-          </div>
-        </nav>
+        <Sidebar
+          changeSidebar={changeSidebar}
+          toogleSidebar={toogleSidebar}
+          contactUsModal={contactUsModal}
+          changeSetNumberModal={changeSetNumberModal}
+          history={history}
+        />
         <div className="content">
           <div className={`sidebar-group ${toogleSidebar ? 'open' : ''}`}>
             <div id="chats" className="sidebar active">
@@ -477,7 +470,7 @@ const Home = props => {
                       id="newConversatoion"
                       onClick={conversationModal}
                     >
-                      <i className="ti-comment-alt"></i>
+                      <i className="ti-comment"></i>
                     </div>
                     <Tooltip
                       placement="top"
@@ -491,265 +484,408 @@ const Home = props => {
                   </li>
                 </ul>
               </header>
-              <PerfectScrollbar>
-                <div className="sidebar-body">
-                  <ul className="list-group list-group-flush">
-                    {members &&
-                      members.members &&
-                      members.members.map((member, i) => (
-                        <li
-                          key={i}
-                          className={`list-group-item ${
-                            member.memberNum === values.phoneNum
-                              ? 'open-chat'
-                              : ''
-                          }`}
-                          onClick={() => setMemNumber(member.memberNum)}
-                        >
-                          <figure className="avatar">
-                            <img src={sms} alt="member" />
-                          </figure>
-                          <div className="users-list-body">
-                            <h5>{phoneNumFormat(member.memberNum)}</h5>
-                            {members.notifies &&
-                              members.notifies.map((notify, i) => {
-                                if (notify.number === member.memberNum) {
-                                  return (
-                                    <div key={i} className="users-list-action">
-                                      <div className="new-message-count">
-                                        {notify.newMsg}
-                                      </div>
+              <Nav tabs>
+                <NavItem>
+                  <NavLink
+                    className={classnames({
+                      active: favTab === 'favTab1',
+                    })}
+                    onClick={() => {
+                      favTabToggole('favTab1')
+                    }}
+                  >
+                    Conversation
+                  </NavLink>
+                </NavItem>
+                <NavItem>
+                  <NavLink
+                    className={classnames({
+                      active: favTab === 'favTab2',
+                    })}
+                    onClick={() => {
+                      favTabToggole('favTab2')
+                    }}
+                  >
+                    Favorites
+                  </NavLink>
+                </NavItem>
+              </Nav>
+              <div className="sidebar-body">
+                <PerfectScrollbar>
+                  <TabContent activeTab={favTab}>
+                    <TabPane tabId="favTab1">
+                      <ul className="list-group list-group-flush">
+                        {members &&
+                          members.members &&
+                          members.members.map((member, i) => (
+                            <li
+                              key={i}
+                              className={`list-group-item ${
+                                member.memberNum === values.phoneNum
+                                  ? 'open-chat'
+                                  : ''
+                              }`}
+                              onClick={() => setMemNumber(member.memberNum)}
+                            >
+                              <figure className="avatar">
+                                <img src={sms} alt="member" />
+                              </figure>
+                              <div className="users-list-body">
+                                <h5>{phoneNumFormat(member.memberNum)}</h5>
+                                {members.notifies &&
+                                  members.notifies.map((notify, i) => {
+                                    if (notify.number === member.memberNum) {
+                                      return (
+                                        <div
+                                          key={i}
+                                          className="users-list-action"
+                                        >
+                                          <div className="new-message-count">
+                                            {notify.newMsg}
+                                          </div>
+                                        </div>
+                                      )
+                                    }
+                                    return true
+                                  })}
+                                {members.notifies.length === 0 && (
+                                  <div className="users-list-action">
+                                    <div className="action-toggle">
+                                      <DropMenu
+                                        tab="favTab1"
+                                        toNumber={member.memberNum}
+                                        fromNumber={adminPhoneNum}
+                                        email={userName.userEmail}
+                                        deleteHistory={deleteHistory}
+                                      />
                                     </div>
-                                  )
-                                }
-                                return true
-                              })}
-                          </div>
-                        </li>
-                      ))}
-                  </ul>
-                </div>
-              </PerfectScrollbar>
+                                  </div>
+                                )}
+                              </div>
+                            </li>
+                          ))}
+                      </ul>
+                    </TabPane>
+
+                    <TabPane tabId="favTab2">
+                      <ul className="list-group list-group-flush">
+                        {members &&
+                          members.favoriteMem &&
+                          members.favoriteMem.map((member, i) => (
+                            <li
+                              key={i}
+                              className={`list-group-item ${
+                                member.memberNum === values.phoneNum
+                                  ? 'open-chat'
+                                  : ''
+                              }`}
+                              onClick={() => setMemNumber(member.memberNum)}
+                            >
+                              <figure className="avatar">
+                                <img src={sms} alt="member" />
+                              </figure>
+                              <div className="users-list-body">
+                                <h5>{phoneNumFormat(member.memberNum)}</h5>
+                                {members.notifies &&
+                                  members.notifies.map((notify, i) => {
+                                    if (notify.number === member.memberNum) {
+                                      return (
+                                        <div
+                                          key={i}
+                                          className="users-list-action"
+                                        >
+                                          <div className="new-message-count">
+                                            {notify.newMsg}
+                                          </div>
+                                        </div>
+                                      )
+                                    }
+                                    return true
+                                  })}
+                                {members.notifies.length === 0 && (
+                                  <div className="users-list-action">
+                                    <div className="action-toggle">
+                                      <DropMenu
+                                        tab="favTab2"
+                                        toNumber={member.memberNum}
+                                        fromNumber={adminPhoneNum}
+                                        email={userName.userEmail}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </li>
+                          ))}
+                      </ul>
+                    </TabPane>
+                  </TabContent>
+                </PerfectScrollbar>
+              </div>
             </div>
           </div>
           <div className="chat">
             <div className="chat-header">
-              <div className="col-md-7">
-                <div className="chat-header-user">
-                  <figure className="avatar avatar-lg">
-                    <img src={silhoutte} alt="img" />
-                  </figure>
-                  <div>
-                    <h5>{userName.fullName}</h5>
-                    <small className="text-muted">
-                      <i>
-                        {adminPhoneNum
-                          ? phoneNumFormat(adminPhoneNum)
-                          : 'Phone Number'}
-                      </i>
-                    </small>
-                  </div>
+              <div className="chat-header-user">
+                <figure className="avatar avatar-lg">
+                  <img src={silhoutte} alt="img" />
+                </figure>
+                <div>
+                  <h5>{userName.fullName}</h5>
+                  <small className="text-muted">
+                    <i>
+                      {adminPhoneNum
+                        ? phoneNumFormat(adminPhoneNum)
+                        : 'Phone Number'}
+                    </i>
+                  </small>
                 </div>
               </div>
+              <div className="chat-header-action">
+                <ul className="list-inline">
+                  <li className="list-inline-item">
+                    <Dropdown isOpen={printerDropdown} toggle={printerToggle}>
+                      <DropdownToggle>
+                        <i className="ti-more"></i>
+                      </DropdownToggle>
+
+                      {messages.length === 0 ? (
+                        <DropdownMenu right>
+                          <DropdownItem disabled>Print</DropdownItem>
+                        </DropdownMenu>
+                      ) : (
+                        <DropdownMenu right>
+                          <DropdownItem onClick={printerModal}>
+                            Print
+                          </DropdownItem>
+                        </DropdownMenu>
+                      )}
+                    </Dropdown>
+                  </li>
+                </ul>
+              </div>
             </div>
-
-            <div className="chat-body">
-              <PerfectScrollbar ref={messagesEndRef}>
-                <div className="messages">
-                  {values.phoneNum &&
-                    messages &&
-                    messages.map((message, index) => {
-                      if (
-                        values.phoneNum === message.to_number &&
-                        adminPhoneNum === message.from_number &&
-                        message.direction === 'out'
-                      ) {
-                        return (
-                          <div
-                            key={index}
-                            className="message-item outgoing-message"
-                          >
-                            {mainNums.includes(adminPhoneNum) ||
-                            mainNums.includes(values.phoneNum) ? (
-                              <div className="message-action">
-                                From: {message.sender}
-                              </div>
-                            ) : (
-                              ''
-                            )}
-                            {message.text ? (
-                              <div className="message-content">
-                                {message.text}
-                              </div>
-                            ) : (
-                              ''
-                            )}
-                            {message.media ? (
-                              <div className="message-content mt-2">
-                                <a href={message.media}>
-                                  <img
-                                    src={message.media}
-                                    className="img-view"
-                                    alt="download"
-                                  />
-                                </a>
-                              </div>
-                            ) : (
-                              ''
-                            )}
-
-                            {message.state === '1' ? (
-                              <div className="message-action">
-                                {convertDateTime(message.createdAt)}
-                                <i className="ti-double-check"></i>
-                              </div>
-                            ) : (
-                              <div className="message-action">
-                                {convertDateTime(message.createdAt)}
-                                <i className="ti-check"></i>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      } else if (
-                        (values.phoneNum === message.from_number &&
-                          adminPhoneNum === message.to_number &&
-                          message.direction === 'in') ||
-                        (message.media &&
-                          values.phoneNum === message.from_number &&
-                          adminPhoneNum === message.to_number)
-                      ) {
-                        return (
-                          <div key={index} className="message-item">
-                            {mainNums.includes(adminPhoneNum) ||
-                            mainNums.includes(values.phoneNum) ? (
-                              <div className="message-action">
-                                To: {phoneNumFormat(message.to_number)}
-                              </div>
-                            ) : (
-                              ''
-                            )}
-                            {message.text ? (
-                              <div className="message-content">
-                                {message.text}
-                              </div>
-                            ) : (
-                              ''
-                            )}
-                            {message.media ? (
-                              <div className="message-content mt-2">
-                                <a href={message.media}>
-                                  <img
-                                    src={message.media}
-                                    className="img-view"
-                                    alt="download"
-                                  />
-                                </a>
-                              </div>
-                            ) : (
-                              ''
-                            )}
-                            <div className="message-action">
-                              {convertDateTime(message.createdAt)}
-                            </div>
-                          </div>
-                        )
-                      }
-                      return true
-                    })}
-                  {!values.phoneNum &&
-                    messages &&
-                    messages.map(
-                      (message, index) =>
-                        userPhoneNum &&
-                        userPhoneNum.map(userNum => {
-                          if (
-                            userNum === message.from_number &&
-                            message.direction === 'out'
-                          ) {
-                            return (
-                              <div
-                                key={index}
-                                className="message-item outgoing-message"
-                              >
+            {printerToogle && (
+              <Printer
+                printerToogle={printerToogle}
+                printerModal={printerModal}
+                startDate={startDate}
+                endDate={endDate}
+                startDateChange={startDateChange}
+                endDateChange={endDateChange}
+                exportPDF={exportPDF}
+                styleMode={styleMode}
+              />
+            )}
+            <div
+              className={`chat-body ${
+                messages.length === 0 ? 'no-message' : ''
+              }`}
+            >
+              <PerfectScrollbar ref={messageScrollRef}>
+                {messages.length === 0 ? (
+                  <div className="no-message-container">
+                    <i className="fas fa-comments"></i>
+                    <p>Select a chat to read messages</p>
+                  </div>
+                ) : (
+                  <div className="messages">
+                    {values.phoneNum &&
+                      messages &&
+                      messages.map((message, index) => {
+                        if (
+                          values.phoneNum === message.to_number &&
+                          adminPhoneNum === message.from_number &&
+                          message.direction === 'out'
+                        ) {
+                          return (
+                            <div
+                              key={index}
+                              className="message-item outgoing-message"
+                            >
+                              {mainNums.includes(adminPhoneNum) ||
+                              mainNums.includes(values.phoneNum) ? (
                                 <div className="message-action">
-                                  From: {phoneNumFormat(message.from_number)}
+                                  From: {message.sender}
                                 </div>
-                                {message.text ? (
-                                  <div className="message-content">
-                                    {message.text}
-                                  </div>
-                                ) : (
-                                  ''
-                                )}
-                                {message.media ? (
-                                  <div className="message-content mt-2">
-                                    <a href={message.media}>
-                                      <img
-                                        src={message.media}
-                                        className="img-view"
-                                        alt="download"
-                                      />
-                                    </a>
-                                  </div>
-                                ) : (
-                                  ''
-                                )}
+                              ) : (
+                                ''
+                              )}
+                              {message.text ? (
+                                <div className="message-content">
+                                  {message.text}
+                                </div>
+                              ) : (
+                                ''
+                              )}
+                              {message.media ? (
+                                <div className="message-content mt-2">
+                                  <a href={message.media}>
+                                    <img
+                                      src={message.media}
+                                      className="img-view"
+                                      alt="download"
+                                    />
+                                  </a>
+                                </div>
+                              ) : (
+                                ''
+                              )}
 
-                                {message.state === '1' ? (
-                                  <div className="message-action">
-                                    {convertDateTime(message.createdAt)}
-                                    <i className="ti-double-check"></i>
-                                  </div>
-                                ) : (
-                                  <div className="message-action">
-                                    {convertDateTime(message.createdAt)}
-                                    <i className="ti-check"></i>
-                                  </div>
-                                )}
-                              </div>
-                            )
-                          } else if (
-                            (userNum === message.to_number &&
-                              message.direction === 'in') ||
-                            (message.media && userNum === message.to_number)
-                          ) {
-                            return (
-                              <div key={index} className="message-item">
+                              {message.state === '1' ? (
+                                <div className="message-action">
+                                  {convertDateTime(message.createdAt)}
+                                  <i className="ti-double-check"></i>
+                                </div>
+                              ) : (
+                                <div className="message-action">
+                                  {convertDateTime(message.createdAt)}
+                                  <i className="ti-check"></i>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        } else if (
+                          (values.phoneNum === message.from_number &&
+                            adminPhoneNum === message.to_number &&
+                            message.direction === 'in') ||
+                          (message.media &&
+                            values.phoneNum === message.from_number &&
+                            adminPhoneNum === message.to_number)
+                        ) {
+                          return (
+                            <div key={index} className="message-item">
+                              {mainNums.includes(adminPhoneNum) ||
+                              mainNums.includes(values.phoneNum) ? (
                                 <div className="message-action">
                                   To: {phoneNumFormat(message.to_number)}
                                 </div>
-
-                                {message.text ? (
-                                  <div className="message-content">
-                                    {message.text}
-                                  </div>
-                                ) : (
-                                  ''
-                                )}
-                                {message.media ? (
-                                  <div className="message-content mt-2">
-                                    <a href={message.media}>
-                                      <img
-                                        src={message.media}
-                                        className="img-view"
-                                        alt="download"
-                                      />
-                                    </a>
-                                  </div>
-                                ) : (
-                                  ''
-                                )}
-                                <div className="message-action">
-                                  {convertDateTime(message.createdAt)}
+                              ) : (
+                                ''
+                              )}
+                              {message.text ? (
+                                <div className="message-content">
+                                  {message.text}
                                 </div>
+                              ) : (
+                                ''
+                              )}
+                              {message.media ? (
+                                <div className="message-content mt-2">
+                                  <a href={message.media}>
+                                    <img
+                                      src={message.media}
+                                      className="img-view"
+                                      alt="download"
+                                    />
+                                  </a>
+                                </div>
+                              ) : (
+                                ''
+                              )}
+                              <div className="message-action">
+                                {convertDateTime(message.createdAt)}
                               </div>
-                            )
-                          }
-                          return true
-                        }),
-                    )}
-                </div>
+                            </div>
+                          )
+                        }
+                        return true
+                      })}
+                    {!values.phoneNum &&
+                      messages &&
+                      messages.map(
+                        (message, index) =>
+                          userPhoneNum &&
+                          userPhoneNum.map(userNum => {
+                            if (
+                              userNum.number === message.from_number &&
+                              message.direction === 'out'
+                            ) {
+                              return (
+                                <div
+                                  key={index}
+                                  className="message-item outgoing-message"
+                                >
+                                  <div className="message-action">
+                                    From: {phoneNumFormat(message.from_number)}
+                                  </div>
+                                  {message.text ? (
+                                    <div className="message-content">
+                                      {message.text}
+                                    </div>
+                                  ) : (
+                                    ''
+                                  )}
+                                  {message.media ? (
+                                    <div className="message-content mt-2">
+                                      <a href={message.media}>
+                                        <img
+                                          src={message.media}
+                                          className="img-view"
+                                          alt="download"
+                                        />
+                                      </a>
+                                    </div>
+                                  ) : (
+                                    ''
+                                  )}
+
+                                  {message.state === '1' ? (
+                                    <div className="message-action">
+                                      {convertDateTime(message.createdAt)}
+                                      <i className="ti-double-check"></i>
+                                    </div>
+                                  ) : (
+                                    <div className="message-action">
+                                      {convertDateTime(message.createdAt)}
+                                      <i className="ti-check"></i>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            } else if (
+                              (userNum === message.to_number &&
+                                message.direction === 'in') ||
+                              (message.media && userNum === message.to_number)
+                            ) {
+                              return (
+                                <div key={index} className="message-item">
+                                  <div className="message-action">
+                                    To: {phoneNumFormat(message.to_number)}
+                                  </div>
+
+                                  {message.text ? (
+                                    <div className="message-content">
+                                      {message.text}
+                                    </div>
+                                  ) : (
+                                    ''
+                                  )}
+                                  {message.media ? (
+                                    <div className="message-content mt-2">
+                                      <a href={message.media}>
+                                        <img
+                                          src={message.media}
+                                          className="img-view"
+                                          alt="download"
+                                        />
+                                      </a>
+                                    </div>
+                                  ) : (
+                                    ''
+                                  )}
+                                  <div className="message-action">
+                                    {convertDateTime(message.createdAt)}
+                                  </div>
+                                </div>
+                              )
+                            }
+                            return true
+                          }),
+                      )}
+                    <div ref={messagesEndRef} id="end-message" />
+                  </div>
+                )}
               </PerfectScrollbar>
             </div>
             <div className="chat-footer">
@@ -810,32 +946,31 @@ const mapStateToProps = state => ({
   userName: state.message.userName,
   messages: state.message.messages,
   members: state.message.members,
+  styleMode: state.message.numbers.styleMode,
 })
 const mapDispatchToProps = dispatch => ({
   sendMessage: (toNumber, fromNumber, msgText, sender, uploadImgName) =>
     dispatch(sendMessage(toNumber, fromNumber, msgText, sender, uploadImgName)),
-  getMessage: (toNumber, fromNumber, fromNums) => {
-    dispatch(getMessage(toNumber, fromNumber, fromNums))
+  getMessage: (toNumber, fromNumber) => {
+    dispatch(getMessage(toNumber, fromNumber))
   },
-  saveUserNumber: (fromNumber, email) => {
-    dispatch(saveUserNumber(fromNumber, email))
+  getPrintMessage: (toNumber, fromNumber, startDate, endDate) => {
+    dispatch(getPrintMessage(toNumber, fromNumber, startDate, endDate))
   },
-  getAllNumbers: userNumber => {
-    dispatch(getAllNumbers(userNumber))
-  },
-  sendContact: data => {
-    dispatch(sendContact(data))
+  getAllNumbers: (userNumber, email) => {
+    dispatch(getAllNumbers(userNumber, email))
   },
   setMemberNum: num => {
     dispatch(setMemberNum(num))
   },
-  newMssage: data => {
-    dispatch(newMssage(data))
+  newMssage: (data, email) => {
+    dispatch(newMssage(data, email))
+  },
+  getUserData: () => {
+    dispatch(getUserData())
+  },
+  deleteConversation: (toNumber, fromNumber, email) => {
+    dispatch(deleteConversation(toNumber, fromNumber, email))
   },
 })
-export default withRouter(
-  connect(
-    mapStateToProps,
-    mapDispatchToProps,
-  )(Home),
-)
+export default connect(mapStateToProps, mapDispatchToProps)(Home)
