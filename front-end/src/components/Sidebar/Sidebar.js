@@ -8,6 +8,7 @@ const Sidebar = props => {
     toogleSidebar,
     contactUsModal,
     changeSetNumberModal,
+    userKazooPanelModal,
   } = props
 
   const logout = () => {
@@ -54,7 +55,7 @@ const Sidebar = props => {
 
           <li>
             <span onClick={contactUsModal}>
-              <i className="ti-pencil-alt"></i>
+              <i className="ti-envelope"></i>
             </span>
           </li>
           <li>
@@ -62,6 +63,12 @@ const Sidebar = props => {
               <i className="ti-settings"></i>
             </span>
           </li>
+          <li>
+            <span onClick={userKazooPanelModal}>
+              <i className="ti-panel"></i>
+            </span>
+          </li>
+
           <li>
             <span onClick={reload}>
               <i className="ti-reload"></i>

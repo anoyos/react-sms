@@ -23,7 +23,8 @@ export default (state = defaultState, action) => {
       return { ...state, mem_number: action.payload }
     case CONSTS.SMS_NOTIFICATION:
       return { ...state, notification: action.payload }
-
+    case CONSTS.GET_CALL_FORWARD:
+      return { ...state, call_forward: action.payload }
     default:
       return state
   }

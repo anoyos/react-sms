@@ -156,12 +156,22 @@ export const saveStyleMode = (mode, userEmail) => {
       })
   }
 }
-export const sendContact = data => {
+export const saveEmailAlert = (state, userEmail) => {
   return async dispatch => {
-    await axios.post(`${CONFIG.serverURL}/sendcontact`, data).then(res => {
-      console.log(res)
-    })
+    await axios
+      .post(`${CONFIG.serverURL}/savemailalert`, {
+        emailAlert: state,
+        email: userEmail,
+      })
+      .then(res => {
+        if (res.status === 200) dispatch(getUserData())
+      })
   }
+}
+export const sendContact = data => {
+  axios.post(`${CONFIG.serverURL}/sendcontact`, data).then(res => {
+    console.log(res)
+  })
 }
 
 export const setMemberNum = data => {
@@ -248,5 +258,51 @@ export const deleteFavoriteMessage = (fromNumber, toNumber, email) => {
           }
         })
     }
+  }
+}
+export const addUserLabel = (email, number, label, contactID, fromNumber) => {
+  return async dispatch => {
+    const msgData = {
+      userID: email,
+      phoneNumber: number,
+      labelName: label,
+      contactID: contactID,
+    }
+    await axios
+      .post(`${CONFIG.serverURL}/adduserlabel`, {
+        msgData,
+      })
+      .then(res => {
+        if (res.status === 200) {
+          dispatch(getAllNumbers(fromNumber, email))
+        }
+      })
+  }
+}
+export const getCallForward = () => {
+  return async dispatch => {
+    const account_id = localStorage.getItem('account_id')
+    const owner_id = localStorage.getItem('user_id')
+
+    const getCall = `${CONFIG.API_URL}/accounts/${account_id}/users/${owner_id}`
+    await axios.get(getCall).then(res => {
+      if (res.data)
+        dispatch({
+          type: CONSTS.GET_CALL_FORWARD,
+          payload: res.data.data,
+        })
+    })
+  }
+}
+export const saveCallForward = updateData => {
+  return async (dispatch, getState) => {
+    const { call_forward } = getState().message
+    call_forward.call_forward = updateData
+    const account_id = localStorage.getItem('account_id')
+    const owner_id = localStorage.getItem('user_id')
+    const getCall = `${CONFIG.API_URL}/accounts/${account_id}/users/${owner_id}`
+    await axios.post(getCall, { data: call_forward }).then(res => {
+      console.log(res.data)
+    })
   }
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { connect } from 'react-redux'
+import { parsePhoneNumberFromString } from 'libphonenumber-js'
 import Notification from 'react-web-notification'
 import alertIcon from '../../asset/media/img/VentureTel-SMS-Logo.png'
 import alertAudio from '../../asset/media/mp3/drop.mp3'
@@ -32,9 +33,9 @@ const Notifications = props => {
 
   const handleButtonClick = () => {
     const title = 'SMS Desktop Alert'
-    const body = 'New Message from ' + fromNumber
+    const body =
+      'You have unread text messages from ' + phoneNumFormat(fromNumber)
     const icon = alertIcon
-
     const options = {
       body: body,
       icon: icon,
@@ -44,12 +45,19 @@ const Notifications = props => {
     updateTitle(title)
     updateOptions(options)
   }
-
+  const phoneNumFormat = number => {
+    if (number) {
+      const phone_number = parsePhoneNumberFromString(number)
+      const phoneNumber = phone_number.formatNational()
+      return phoneNumber
+    } else return number
+  }
   useEffect(() => {
     if (state) {
       handleButtonClick()
       audio.play()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notification])
   return (
     <div>
