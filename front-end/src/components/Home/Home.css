@@ -241,7 +241,17 @@
   margin-bottom: 0.2rem;
   line-height: 1;
 }
-
+.layout .content .sidebar-group .sidebar .list-group-item .users-list-body h6 {
+  white-space: nowrap;
+  -o-text-overflow: ellipsis;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 0.5rem;
+  font-style: italic;
+  color: #8e8c8c;
+}
 .layout .content .sidebar-group .sidebar .list-group-item .users-list-body p {
   white-space: nowrap;
   -o-text-overflow: ellipsis;
@@ -298,6 +308,7 @@
 }
 
 .layout .list-group-item .users-list-body .users-list-action .action-toggle {
+  z-index: 10;
   display: none;
 }
 
@@ -1065,7 +1076,7 @@ figure.avatar.avatar-state-dark:before {
 }
 
 .tab-content {
-  padding-top: 15px;
+  margin: 15px 0;
 }
 
 .tab-content .form-item {
@@ -1150,4 +1161,30 @@ input[type='file'] {
   background-color: #3db16b;
   color: white;
   border-radius: 50%;
+}
+
+.btn.call-forward-light {
+  background: #e6e6e6;
+  border-color: #d4d4de;
+  border-radius: 0px;
+}
+.btn.call-forward-light:focus,
+.btn.call-forward-light:hover {
+  border-color: transparent !important;
+  background-color: #c8c8c8 !important;
+}
+
+.btn.call-forward-dark {
+  background: #5a5c66;
+  border-color: #5a5c66;
+}
+.btn.call-forward-dark:focus,
+.btn.call-forward-dark:hover {
+  border-color: transparent !important;
+  background-color: #e6e6e6 !important;
+}
+.call-forward-btns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

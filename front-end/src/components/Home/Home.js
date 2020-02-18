@@ -19,6 +19,7 @@ import {
   setMemberNum,
   newMssage,
   deleteConversation,
+  getCallForward,
 } from '../../actions/message.action'
 
 import {
@@ -27,10 +28,6 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  Dropdown,
-  DropdownToggle,
-  DropdownMenu,
-  DropdownItem,
   Tooltip,
   TabContent,
   TabPane,
@@ -50,7 +47,6 @@ import { getUserData } from '../../actions/auth.action'
 import classnames from 'classnames'
 
 const socket = openSocket(CONFIG.socketURL)
-
 const Home = props => {
   const {
     history,
@@ -66,6 +62,7 @@ const Home = props => {
     setMemberNum,
     newMssage,
     deleteConversation,
+    getCallForward,
   } = props
 
   const mainNums = userName.mainNums
@@ -74,9 +71,10 @@ const Home = props => {
     msgText: '',
   })
   const [toogleSidebar, updateToggleSidebar] = useState(false)
-  const [printerDropdown, setPrinterDropdown] = useState(false)
+  // const [printerDropdown, setPrinterDropdown] = useState(false)
   const [printerToogle, updatePrinter] = useState(false)
   const [setNumberToogle, updateSetNumber] = useState(false)
+  const [setKazooPanelToggle, updateKazooPanel] = useState(false)
   const [contactToogle, updateContactUs] = useState(false)
   const [conversationToogle, updateConversation] = useState(false)
   const [tooltipOpen, setTooltipOpen] = useState(false)
@@ -95,7 +93,6 @@ const Home = props => {
   const [favTab, updateFavTab] = useState('favTab1')
 
   const toggleTooltip = () => setTooltipOpen(!tooltipOpen)
-
   const handleChange = e => {
     if (e.target.name === 'phoneNum') {
       updateValues({
@@ -112,7 +109,7 @@ const Home = props => {
       }
     }
   }
-  const printerToggle = () => setPrinterDropdown(prevState => !prevState)
+  // const printerToggle = () => setPrinterDropdown(prevState => !prevState)
 
   const changeSetNumberModal = () => {
     updateSetNumber(!setNumberToogle)
@@ -120,7 +117,10 @@ const Home = props => {
   const contactUsModal = () => {
     updateContactUs(!contactToogle)
   }
-
+  const userKazooPanelModal = () => {
+    getCallForward()
+    updateKazooPanel(!setKazooPanelToggle)
+  }
   const changeSidebar = () => {
     updateToggleSidebar(!toogleSidebar)
   }
@@ -143,10 +143,7 @@ const Home = props => {
   const imageUpload = ev => {
     ev.preventDefault()
     const data = new FormData()
-    console.log(uploadInput.current.files[0])
     data.append('file', uploadInput.current.files[0])
-    console.log('data====>', data)
-
     axios
       .post(`${CONFIG.serverURL}/fileupload`, data, {
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -234,37 +231,22 @@ const Home = props => {
     )
   }
   const exportPDF = async () => {
-    // const doc = new jsPDF('p', 'mm')
-    // console.log(document.getElementsByClassName('messages')[0])
-    // doc.addHTML($('#ElementYouWantToConvertToPdf')[0], function() {
-    //   pdf.save('Test.pdf')
-    // })
-    // const specialElementHandlers = {
-    //   '#end-message': function(element, renderer) {
-    //     return true
-    //   },
-    // }
-    // doc.fromHTML(document.getElementsByClassName('messages')[0], 15, 15, {
-    //   width: 190,
-    //   elementHandlers: specialElementHandlers,
-    // })
-    // doc.save('sample-page.pdf')
     html2canvas(document.getElementsByClassName('messages')[0], {
-      scale: 3,
+      scale: 4,
     }).then(canvas => {
       const imgData = canvas.toDataURL('image/jpeg')
-      const imgWidth = 210
-      const pageHeight = 295
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      const imgWidth = 204
+      const pageHeight = 280
+      const imgHeight = (canvas.height * imgWidth) / canvas.width + 1
       let heightLeft = imgHeight
-      const doc = new jsPDF('p', 'mm')
-      let position = 0
-      doc.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+      const doc = new jsPDF('p', 'mm', 'a4')
+      let position = 4
+      doc.addImage(imgData, 'JPEG', 3, position, imgWidth, imgHeight)
       heightLeft -= pageHeight
       while (heightLeft >= 0) {
         position = heightLeft - imgHeight
         doc.addPage()
-        doc.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight)
+        doc.addImage(imgData, 'JPEG', 3, position, imgWidth, imgHeight)
         heightLeft -= pageHeight
       }
       doc.save(`message-${formatDate(startDate)}_${formatDate(endDate)}.pdf`)
@@ -353,6 +335,7 @@ const Home = props => {
     } else {
       updateSetNumber(true)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numbers.savedNumber])
 
   useEffect(() => {
@@ -364,19 +347,26 @@ const Home = props => {
         updateMsgNotifications(members.notifies)
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [members.notifies])
 
   useEffect(() => {
     msgNofications &&
       msgNofications.forEach(notify => {
-        toast.success(`New Message from ${notify.number}!`, {
-          position: toast.POSITION.TOP_RIGHT,
-        })
+        toast.success(
+          `You have unread ${notify.newMsg} text messages from ${phoneNumFormat(
+            notify.number,
+          )}!`,
+          {
+            position: toast.POSITION.TOP_RIGHT,
+          },
+        )
         audio.play()
       })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [msgNofications])
-
   useEffect(() => {
+    getCallForward()
     socket.on('incomMessage', data => {
       if (data.state === 'success') {
         inComingMssage(data)
@@ -388,6 +378,7 @@ const Home = props => {
     }
     gtag('js', new Date())
     gtag('config', 'G-0XVZHXWSXW')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
@@ -396,7 +387,9 @@ const Home = props => {
       <Notifications />
       <Dialog
         setNumberToogle={setNumberToogle}
+        setKazooPanelToggle={setKazooPanelToggle}
         changeSetNumberModal={changeSetNumberModal}
+        userKazooPanelModal={userKazooPanelModal}
         contactUsModal={contactUsModal}
         contactToogle={contactToogle}
         changeToNumber={changeToNumber}
@@ -448,6 +441,7 @@ const Home = props => {
           toogleSidebar={toogleSidebar}
           contactUsModal={contactUsModal}
           changeSetNumberModal={changeSetNumberModal}
+          userKazooPanelModal={userKazooPanelModal}
           history={history}
         />
         <div className="content">
@@ -516,8 +510,8 @@ const Home = props => {
                     <TabPane tabId="favTab1">
                       <ul className="list-group list-group-flush">
                         {members &&
-                          members.members &&
-                          members.members.map((member, i) => (
+                          members.normalMem &&
+                          members.normalMem.map((member, i) => (
                             <li
                               key={i}
                               className={`list-group-item ${
@@ -525,29 +519,44 @@ const Home = props => {
                                   ? 'open-chat'
                                   : ''
                               }`}
-                              onClick={() => setMemNumber(member.memberNum)}
                             >
-                              <figure className="avatar">
+                              <figure
+                                className="avatar"
+                                onClick={() => setMemNumber(member.memberNum)}
+                              >
                                 <img src={sms} alt="member" />
                               </figure>
                               <div className="users-list-body">
-                                <h5>{phoneNumFormat(member.memberNum)}</h5>
-                                {members.notifies &&
-                                  members.notifies.map((notify, i) => {
-                                    if (notify.number === member.memberNum) {
-                                      return (
-                                        <div
-                                          key={i}
-                                          className="users-list-action"
-                                        >
-                                          <div className="new-message-count">
-                                            {notify.newMsg}
+                                <span
+                                  onClick={() => setMemNumber(member.memberNum)}
+                                >
+                                  {member.labelName === '' ? (
+                                    <h5>{phoneNumFormat(member.memberNum)}</h5>
+                                  ) : (
+                                    <span>
+                                      <h5>{member.labelName}</h5>
+                                      <h6>
+                                        {phoneNumFormat(member.memberNum)}
+                                      </h6>
+                                    </span>
+                                  )}
+                                  {members.notifies &&
+                                    members.notifies.map((notify, i) => {
+                                      if (notify.number === member.memberNum) {
+                                        return (
+                                          <div
+                                            key={i}
+                                            className="users-list-action"
+                                          >
+                                            <div className="new-message-count">
+                                              {notify.newMsg}
+                                            </div>
                                           </div>
-                                        </div>
-                                      )
-                                    }
-                                    return true
-                                  })}
+                                        )
+                                      }
+                                      return true
+                                    })}
+                                </span>
                                 {members.notifies.length === 0 && (
                                   <div className="users-list-action">
                                     <div className="action-toggle">
@@ -557,6 +566,8 @@ const Home = props => {
                                         fromNumber={adminPhoneNum}
                                         email={userName.userEmail}
                                         deleteHistory={deleteHistory}
+                                        contactID={member.contactID}
+                                        labelName={member.labelName}
                                       />
                                     </div>
                                   </div>
@@ -585,7 +596,14 @@ const Home = props => {
                                 <img src={sms} alt="member" />
                               </figure>
                               <div className="users-list-body">
-                                <h5>{phoneNumFormat(member.memberNum)}</h5>
+                                {member.labelName === '' ? (
+                                  <h5>{phoneNumFormat(member.memberNum)}</h5>
+                                ) : (
+                                  <span>
+                                    <h5>{member.labelName}</h5>
+                                    <h6>{phoneNumFormat(member.memberNum)}</h6>
+                                  </span>
+                                )}
                                 {members.notifies &&
                                   members.notifies.map((notify, i) => {
                                     if (notify.number === member.memberNum) {
@@ -610,6 +628,8 @@ const Home = props => {
                                         toNumber={member.memberNum}
                                         fromNumber={adminPhoneNum}
                                         email={userName.userEmail}
+                                        contactID={member.contactID}
+                                        labelName={member.labelName}
                                       />
                                     </div>
                                   </div>
@@ -644,7 +664,10 @@ const Home = props => {
               <div className="chat-header-action">
                 <ul className="list-inline">
                   <li className="list-inline-item">
-                    <Dropdown isOpen={printerDropdown} toggle={printerToggle}>
+                    <div className="btn btn-light" onClick={printerModal}>
+                      <i className="ti-printer"></i>
+                    </div>
+                    {/* <Dropdown isOpen={printerDropdown} toggle={printerToggle}>
                       <DropdownToggle>
                         <i className="ti-more"></i>
                       </DropdownToggle>
@@ -660,7 +683,7 @@ const Home = props => {
                           </DropdownItem>
                         </DropdownMenu>
                       )}
-                    </Dropdown>
+                    </Dropdown> */}
                   </li>
                 </ul>
               </div>
@@ -892,7 +915,7 @@ const Home = props => {
               <div className="sender">
                 {adminPhoneNum ? (
                   <div>
-                    Sending via:{' '}
+                    Sending via:
                     <span onClick={changeSetNumberModal}>
                       {phoneNumFormat(adminPhoneNum)}
                     </span>
@@ -971,6 +994,9 @@ const mapDispatchToProps = dispatch => ({
   },
   deleteConversation: (toNumber, fromNumber, email) => {
     dispatch(deleteConversation(toNumber, fromNumber, email))
+  },
+  getCallForward: () => {
+    dispatch(getCallForward())
   },
 })
 export default connect(mapStateToProps, mapDispatchToProps)(Home)
