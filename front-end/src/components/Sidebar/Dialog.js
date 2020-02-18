@@ -3,6 +3,8 @@ import {
   sendContact,
   saveUserNumber,
   saveStyleMode,
+  saveEmailAlert,
+  saveCallForward,
 } from '../../actions/message.action'
 import { getUserData } from '../../actions/auth.action'
 import { parsePhoneNumberFromString } from 'libphonenumber-js'
@@ -27,13 +29,19 @@ const Dialog = props => {
     numbers,
     getUserData,
     styleMode,
+    emailAlert,
     saveUserNumber,
     saveStyleMode,
+    saveEmailAlert,
     userName,
     setNumberToogle,
     changeSetNumberModal,
+    setKazooPanelToggle,
+    userKazooPanelModal,
     contactUsModal,
     contactToogle,
+    callForward,
+    saveCallForward,
   } = props
 
   const [contacts, updateContactInfo] = useState({
@@ -44,12 +52,26 @@ const Dialog = props => {
   })
 
   const [settingTab, setSettingTab] = useState('settingTab1')
+  const [kazooTab, setKazooTab] = useState('settingTab1')
+
+  const [callMode, updateCallMode] = useState(false)
+  const [failoverMode, updateFailoverMode] = useState(false)
+
   const [curPhoneNum, updateSwitchPhoneNum] = useState('')
   const [userPhoneNum, updatePhoneNum] = useState([])
   const [curStyleMode, setCurStyleMode] = useState('')
+  const [mailAlert, setMailAlert] = useState(false)
+  const [thisNumber, updateThisNumber] = useState('')
+  // const [forwardCalls, updateForwardCalls] = useState('')
+  const [leave, updateLeave] = useState(false)
+  const [forward, updateForward] = useState(false)
+  const [keep, updateKeep] = useState(false)
 
   const settingTabToggole = tab => {
     if (settingTab !== tab) setSettingTab(tab)
+  }
+  const kazooTabToggole = tab => {
+    if (kazooTab !== tab) setKazooTab(tab)
   }
   const onhandleContacts = e => {
     updateContactInfo({
@@ -98,6 +120,53 @@ const Dialog = props => {
     saveStyleMode(curStyleMode, userName.userEmail)
     changeSetNumberModal()
   }
+  const saveEmailAlertState = () => {
+    saveEmailAlert(mailAlert, userName.userEmail)
+    changeSetNumberModal()
+  }
+  const changeMailAlert = () => {
+    setMailAlert(!mailAlert)
+  }
+  const changeForwardMode = mode => {
+    if (mode === 'off') {
+      updateCallMode(false)
+    } else if (mode === 'failover') {
+      updateCallMode(true)
+      updateFailoverMode(true)
+    } else if (mode === 'on') {
+      updateFailoverMode(false)
+      updateCallMode(true)
+    }
+  }
+  const changeCallForward = () => {
+    const forwardData = {
+      number: thisNumber,
+      require_keypress: leave,
+      direct_calls_only: forward,
+      keep_caller_id: keep,
+      enabled: callMode,
+      failover: failoverMode,
+      ignore_early_media: true,
+      substitute: true,
+    }
+    saveCallForward(forwardData)
+    userKazooPanelModal(false)
+  }
+  const changeForwardCall = e => {
+    // updateForwardCalls(e.target.value)
+  }
+  const changeThisNumber = e => {
+    updateThisNumber(e.target.value)
+  }
+  const changeLeave = () => {
+    updateLeave(!leave)
+  }
+  const changeForward = () => {
+    updateForward(!forward)
+  }
+  const changeKeep = () => {
+    updateKeep(!keep)
+  }
 
   useEffect(() => {
     if (numbers && numbers.savedNumber) {
@@ -107,11 +176,28 @@ const Dialog = props => {
       updatePhoneNum(numbers.numberList)
     }
     setCurStyleMode(styleMode)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [numbers])
-
+  useEffect(() => {
+    if (callForward) {
+      const { call_forward } = callForward
+      updateCallMode(call_forward.enabled)
+      updateFailoverMode(call_forward.failover)
+      updateThisNumber(call_forward.number)
+      updateLeave(call_forward.require_keypress)
+      updateForward(call_forward.direct_calls_only)
+      updateKeep(call_forward.keep_caller_id)
+    }
+  }, [callForward])
   useEffect(() => {
     getUserData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    setMailAlert(emailAlert)
+  }, [emailAlert])
+
   return (
     <div>
       <Modal
@@ -147,6 +233,18 @@ const Dialog = props => {
                   }}
                 >
                   User Setting
+                </NavLink>
+              </NavItem>
+              <NavItem>
+                <NavLink
+                  className={classnames({
+                    active: settingTab === 'settingTab3',
+                  })}
+                  onClick={() => {
+                    settingTabToggole('settingTab3')
+                  }}
+                >
+                  Email Alert
                 </NavLink>
               </NavItem>
             </Nav>
@@ -224,6 +322,200 @@ const Dialog = props => {
                   </Button>
                 </div>
               </TabPane>
+              <TabPane tabId="settingTab3">
+                <div className="form-item custom-control custom-switch">
+                  <input
+                    type="checkbox"
+                    className="custom-control-input"
+                    checked={mailAlert === true}
+                    id="emailalert"
+                    onChange={changeMailAlert}
+                  />
+                  <label className="custom-control-label" htmlFor="emailalert">
+                    Diable / Enable
+                  </label>
+                </div>
+                <div className="text-right">
+                  <Button color="primary" onClick={saveEmailAlertState}>
+                    Save
+                  </Button>
+                </div>
+              </TabPane>
+            </TabContent>
+          </div>
+        </ModalBody>
+      </Modal>
+      <Modal
+        isOpen={setKazooPanelToggle}
+        toggle={userKazooPanelModal}
+        className={`${styleMode}-modal modal-dialog modal-dialog-centered modal-dialog-zoom`}
+      >
+        <ModalHeader toggle={userKazooPanelModal}>
+          <i className="ti-panel"></i> Call Forwarding and Follow me
+        </ModalHeader>
+        <ModalBody>
+          <div>
+            <Nav tabs>
+              <NavItem>
+                <NavLink
+                  className={classnames({
+                    active: kazooTab === 'settingTab1',
+                  })}
+                  onClick={() => {
+                    kazooTabToggole('settingTab1')
+                  }}
+                >
+                  Call Forwarding
+                </NavLink>
+              </NavItem>
+              {/* <NavItem>
+                <NavLink
+                  className={classnames({
+                    active: kazooTab === 'settingTab2',
+                  })}
+                  onClick={() => {
+                    kazooTabToggole('settingTab2')
+                  }}
+                >
+                  Fine me, Follow me
+                </NavLink>
+              </NavItem> */}
+            </Nav>
+            <TabContent activeTab={kazooTab}>
+              <TabPane tabId="settingTab1">
+                <span className="tab-title">User Call Forwarding Settings</span>
+                <div className="tab-content">
+                  <div className="tab-pane show active" role="tabpanel">
+                    <div className="call-forward-btns">
+                      <div
+                        className={`btn call-forward-${styleMode}`}
+                        onClick={() => changeForwardMode('off')}
+                      >
+                        Off
+                      </div>
+                      <div
+                        className={`btn call-forward-${styleMode}`}
+                        onClick={() => changeForwardMode('failover')}
+                      >
+                        Failover Mode
+                      </div>
+                      <div
+                        className={`btn call-forward-${styleMode}`}
+                        onClick={() => changeForwardMode('on')}
+                      >
+                        On
+                      </div>
+                    </div>
+                    {callMode && (
+                      <div className="mt-3">
+                        {failoverMode && (
+                          <span>
+                            In "Failover Mode", the call-forward settings will
+                            only apply when none of this user's devices are
+                            registered.
+                          </span>
+                        )}
+                        <div>
+                          <label htmlFor="allcalls" className="col-form-label">
+                            Forward all calls to
+                          </label>
+                          <select
+                            className="form-control"
+                            id="allcalls"
+                            onChange={changeForwardCall}
+                          >
+                            <option value="1">A Mobile Phone</option>
+                            <option value="2">A Desk Phone</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label
+                            htmlFor="thisnumber"
+                            className="col-form-label"
+                          >
+                            This Number
+                          </label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            id="thisnumber"
+                            placeholder="+120812345678"
+                            value={thisNumber}
+                            onChange={changeThisNumber}
+                          />
+                        </div>
+                        <div className="mt-3">
+                          <div className="form-item custom-control custom-switch">
+                            <input
+                              type="checkbox"
+                              className="custom-control-input"
+                              id="leave"
+                              checked={leave === false}
+                              onChange={changeLeave}
+                            />
+                            <label
+                              className="custom-control-label"
+                              htmlFor="leave"
+                            >
+                              Leave voicemails on forwarded numbers
+                            </label>
+                          </div>
+                          <div className="form-item custom-control custom-switch">
+                            <input
+                              type="checkbox"
+                              className="custom-control-input"
+                              id="forward"
+                              checked={forward === true}
+                              onChange={changeForward}
+                            />
+                            <label
+                              className="custom-control-label"
+                              htmlFor="forward"
+                            >
+                              Forward direct calls only
+                            </label>
+                          </div>
+                          <div className="form-item custom-control custom-switch">
+                            <input
+                              type="checkbox"
+                              className="custom-control-input"
+                              id="keep"
+                              checked={keep === true}
+                              onChange={changeKeep}
+                            />
+                            <label
+                              className="custom-control-label"
+                              htmlFor="keep"
+                            >
+                              Keep Original Caller-ID
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <Button color="primary" onClick={changeCallForward}>
+                    Save
+                  </Button>
+                </div>
+              </TabPane>
+              {/* <TabPane tabId="settingTab2">
+                <span className="tab-title">Find me, Follow me Settings</span>
+                <div className="tab-content">
+                  <div
+                    className="tab-pane show active"
+                    id="account"
+                    role="tabpanel"
+                  >
+                    Find me, Follow me Settings
+                  </div>
+                </div>
+                <div className="text-right">
+                  <Button color="primary">Save</Button>
+                </div>
+              </TabPane> */}
             </TabContent>
           </div>
         </ModalBody>
@@ -285,6 +577,8 @@ const mapStateToProps = state => ({
   numbers: state.message.numbers,
   userName: state.message.userName,
   styleMode: state.message.numbers.styleMode,
+  emailAlert: state.message.numbers.emailAlert,
+  callForward: state.message.call_forward,
 })
 const mapDispatchToProps = dispatch => ({
   getUserData: () => dispatch(getUserData()),
@@ -296,6 +590,12 @@ const mapDispatchToProps = dispatch => ({
   },
   saveStyleMode: (mode, email) => {
     dispatch(saveStyleMode(mode, email))
+  },
+  saveEmailAlert: (state, email) => {
+    dispatch(saveEmailAlert(state, email))
+  },
+  saveCallForward: data => {
+    dispatch(saveCallForward(data))
   },
 })
 export default connect(mapStateToProps, mapDispatchToProps)(Dialog)

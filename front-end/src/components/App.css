@@ -2304,8 +2304,8 @@ a.btn:hover[href='#previous'] {
   margin-right: 10px;
 }
 
-.btn.btn-apple>span,
-.btn.btn-google-play>span {
+.btn.btn-apple > span,
+.btn.btn-google-play > span {
   display: -webkit-box;
   display: -webkit-flex;
   display: -moz-box;
@@ -2321,8 +2321,8 @@ a.btn:hover[href='#previous'] {
   text-align: left;
 }
 
-.btn.btn-apple>span span:nth-child(2),
-.btn.btn-google-play>span span:nth-child(2) {
+.btn.btn-apple > span span:nth-child(2),
+.btn.btn-google-play > span span:nth-child(2) {
   font-size: 20px;
   font-weight: 600;
   margin-top: 5px;
@@ -2348,7 +2348,7 @@ a.btn:hover[href='#previous'] {
   color: white;
 }
 
-.btn.btn-google-play>span span:nth-child(1) {
+.btn.btn-google-play > span span:nth-child(1) {
   text-transform: uppercase;
   font-size: 12px;
 }
@@ -2423,7 +2423,7 @@ a.btn:hover[href='#previous'] {
   font-size: 17px;
 }
 
-.dark-modal .modal-content .modal-header .modal-title+button {
+.dark-modal .modal-content .modal-header .modal-title + button {
   text-shadow: none;
   font-size: 14px;
   margin: 0;
@@ -2539,7 +2539,7 @@ a.btn:hover[href='#previous'] {
   font-size: 17px;
 }
 
-.light-modal .modal-content .modal-header .modal-title+button {
+.light-modal .modal-content .modal-header .modal-title + button {
   text-shadow: none;
   font-size: 14px;
   margin: 0;
@@ -2602,82 +2602,82 @@ a.btn:hover[href='#previous'] {
   border-bottom-color: #dee2e6;
 }
 
-.dark-modal .contact input[type='text'],
-.dark-modal .contact textarea,
-.dark-modal .contact select {
+.dark-modal input[type='text'],
+.dark-modal textarea,
+.dark-modal select {
   background-color: #5a5c66;
   color: rgba(255, 255, 255, 0.7);
   border-color: #6e707a;
 }
 
-.dark-modal .contact input[type='text']:focus,
-.dark-modal .contact textarea:focus,
-.dark-modal .contact select:focus {
+.dark-modal input[type='text']:focus,
+.dark-modal textarea:focus,
+.dark-modal select:focus {
   color: rgba(255, 255, 255, 0.7);
   background-color: #5a5c66;
   border-color: #aaacb6;
 }
-
-.dark-modal .contact input[type='text']::-webkit-input-placeholder,
-.dark-modal .contact textarea::-webkit-input-placeholder,
-.dark-modal .contact select::-webkit-input-placeholder {
+/*
+.dark-modal input[type='text']::-webkit-input-placeholder,
+.dark-modal textarea::-webkit-input-placeholder,
+.dark-modal select::-webkit-input-placeholder {
   color: rgba(255, 255, 255, 0.5);
 }
 
-.dark-modal .contact input[type='text']::-moz-placeholder,
-.dark-modal .contact textarea::-moz-placeholder,
-.dark-modal .contact select::-moz-placeholder {
+.dark-modal input[type='text']::-moz-placeholder,
+.dark-modal textarea::-moz-placeholder,
+.dark-modal select::-moz-placeholder {
   color: rgba(255, 255, 255, 0.5);
 }
 
-.dark-modal .contact input[type='text']::-ms-input-placeholder,
-.dark-modal .contact textarea::-ms-input-placeholder,
-.dark-modal .contact select::-ms-input-placeholder {
+.dark-modal input[type='text']::-ms-input-placeholder,
+.dark-modal textarea::-ms-input-placeholder,
+.dark-modal select::-ms-input-placeholder {
   color: rgba(255, 255, 255, 0.5);
 }
 
-.dark-modal .contact input[type='text']::placeholder,
-.dark-modal .contact textarea::placeholder,
-.dark-modal .contact select::placeholder {
+.dark-modal input[type='text']::placeholder,
+.dark-modal textarea::placeholder,
+.dark-modal select::placeholder {
   color: rgba(255, 255, 255, 0.5);
-}
+} */
 
-.light-modal .contact input[type='text'],
-.light-modal .contact textarea,
-.light-modal .contact select {
+.light-modal input[type='text'],
+.light-modal textarea,
+.light-modal select {
   background-color: #ffffff;
   color: #212529;
   border-color: #6e707a;
 }
 
-.light-modal .contact input[type='text']:focus,
-.light-modal .contact textarea:focus,
-.light-modal .contact select:focus {
+.light-modal input[type='text']:focus,
+.light-modal textarea:focus,
+.light-modal select:focus {
   color: #212529;
   background-color: #ffffff;
   border-color: #aaacb6;
 }
-
-.light-modal .contact input[type='text']::-webkit-input-placeholder,
-.light-modal .contact textarea::-webkit-input-placeholder,
-.light-modal .contact select::-webkit-input-placeholder {
+/*
+.light-modal input[type='text']::-webkit-input-placeholder,
+.light-modal textarea::-webkit-input-placeholder,
+.light-modal select::-webkit-input-placeholder {
   color: #5a5c66;
 }
 
-.light-modal .contact input[type='text']::-moz-placeholder,
-.light-modal .contact textarea::-moz-placeholder,
-.light-modal .contact select::-moz-placeholder {
+.light-modal input[type='text']::-moz-placeholder,
+.light-modal textarea::-moz-placeholder,
+.light-modal select::-moz-placeholder {
   color: #5a5c66;
 }
 
-.light-modal .contact input[type='text']::-ms-input-placeholder,
-.light-modal .contact textarea::-ms-input-placeholder,
-.light-modal .contact select::-ms-input-placeholder {
+.light-modal input[type='text']::-ms-input-placeholder,
+.light-modal textarea::-ms-input-placeholder,
+.light-modal select::-ms-input-placeholder {
   color: #5a5c66;
 }
 
-.light-modal .contact input[type='text']::placeholder,
-.light-modal .contact textarea::placeholder,
-.light-modal .contact select::placeholder {
+.light-modal input[type='text']::placeholder,
+.light-modal textarea::placeholder,
+.light-modal select::placeholder {
   color: #5a5c66;
-}
+} */

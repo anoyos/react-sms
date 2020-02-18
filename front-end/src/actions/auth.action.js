@@ -84,6 +84,7 @@ export const getUserData = () => {
                 savedNumber: res.data.phoneNumber,
                 numberList: num_msg,
                 styleMode: res.data.style_mode ? res.data.style_mode : 'dark',
+                emailAlert: res.data.emailAlert,
               }
               dispatch({
                 type: CONSTS.GET_USER_NUMBER,
