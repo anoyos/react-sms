@@ -1,9 +1,101 @@
 const Message = require("./models/Message");
 const User = require("./models/User");
 const Favorite = require("./models/Favorite");
+const Contact = require("./models/Contact");
 const crypto = require("crypto");
 const http = require("http");
 const nodemailer = require("nodemailer");
+const sendgridtransport = require("nodemailer-sendgrid-transport");
+const transport = nodemailer.createTransport(
+  sendgridtransport({
+    auth: {
+      api_key:
+        "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"
+    }
+  })
+);
+
+const CronJob = require("cron").CronJob;
+const job = new CronJob("0 */2 * * * *", function() {
+  const time1 = new Date(Date.now() - 60 * 60 * 1000);
+  const time2 = new Date(Date.now() - 30 * 60 * 1000);
+  Message.find(
+    {
+      state: "0",
+      email_alert: true,
+      createdAt: {
+        $gte: time1,
+        $lte: time2
+      }
+    },
+    function(err, result) {
+      if (err) {
+        console.log(err);
+      } else if (result && result.length > 0) {
+        const array =
+          result.length > 1
+            ? result.filter(
+                (elem, index, self) =>
+                  self.findIndex(
+                    t =>
+                      t.from_number === elem.from_number &&
+                      t.to_number === elem.to_number &&
+                      t.createdAt.replace(/\.\d+/, "") ===
+                        elem.createdAt.replace(/\.\d+/, "")
+                  ) === index
+              )
+            : result;
+        array.forEach(arr => {
+          User.find(
+            {
+              phoneNumber: arr.to_number,
+              emailAlert: true
+            },
+            function(err, res) {
+              if (res) {
+                res.forEach(r => {
+                  sendMailer(r.email, r.phoneNumber);
+                  Message.updateOne(
+                    {
+                      _id: arr._id
+                    },
+                    { $set: { email_alert: false } },
+                    function(err, result) {
+                      if (err) {
+                        return err;
+                      }
+                    }
+                  );
+                });
+              }
+            }
+          );
+        });
+      }
+    }
+  );
+});
+
+function sendMailer(userMail, phoneNum) {
+  console.log("mail Sender");
+  const fromMail = "joel@tsicloud.com";
+  const text = `You have unread text messages to ${phoneNum}. Go to https://VentureTel.app to check and respond to these messages`;
+  const subject = "VentureTel SMS Notification";
+  const email = {
+    from: fromMail,
+    to: userMail,
+    subject: subject,
+    html: text
+  };
+  transport.sendMail(email, function(err, info) {
+    if (err) {
+      console.log("error");
+    } else {
+      console.log("Message sent: " + info);
+    }
+  });
+}
+job.start();
 
 module.exports = function(app, io) {
   app.post("/userchk", function(req, res) {
@@ -215,7 +307,7 @@ module.exports = function(app, io) {
     const { userNumber, email } = req.body;
     const array = [];
     let numberArray = [];
-
+    let contactList = [];
     Favorite.find(
       {
         email: email,
@@ -226,6 +318,18 @@ module.exports = function(app, io) {
           console.log(err);
         } else {
           numberArray = result;
+        }
+      }
+    );
+    Contact.find(
+      {
+        userID: email
+      },
+      function(err, result) {
+        if (err) {
+          console.log(err);
+        } else {
+          contactList = result;
         }
       }
     );
@@ -251,10 +355,8 @@ module.exports = function(app, io) {
           const arr = array.filter(
             (v, i, a) => a.findIndex(t => t.memberNum === v.memberNum) === i
           );
-
           let notifies = [];
           let index = 0;
-
           arr.forEach(num => {
             Message.find(
               {
@@ -303,11 +405,71 @@ module.exports = function(app, io) {
                         o2.favorite === "1"
                     )
                   );
+
+                  let normalList = [],
+                    favoriteList = [];
+                  if (normal.length > 0) {
+                    normal.forEach(num => {
+                      if (contactList.length > 0) {
+                        let obj = contactList.find(
+                          contactNum => num.memberNum === contactNum.phoneNumber
+                        );
+                        if (obj) {
+                          normalList.push({
+                            memberNum: num.memberNum,
+                            labelName: obj.labelName,
+                            contactID: obj._id
+                          });
+                        } else {
+                          normalList.push({
+                            memberNum: num.memberNum,
+                            labelName: "",
+                            contactID: ""
+                          });
+                        }
+                      } else {
+                        normalList.push({
+                          memberNum: num.memberNum,
+                          labelName: "",
+                          contactID: ""
+                        });
+                      }
+                    });
+                  }
+                  if (favorite.length > 0) {
+                    favorite.forEach(num => {
+                      if (contactList.length > 0) {
+                        let obj = contactList.find(
+                          contactNum => num.memberNum === contactNum.phoneNumber
+                        );
+                        if (obj) {
+                          favoriteList.push({
+                            memberNum: num.memberNum,
+                            labelName: obj.labelName,
+                            contactID: obj._id
+                          });
+                        } else {
+                          favoriteList.push({
+                            memberNum: num.memberNum,
+                            labelName: "",
+                            contactID: ""
+                          });
+                        }
+                      } else {
+                        favoriteList.push({
+                          memberNum: num.memberNum,
+                          labelName: "",
+                          contactID: ""
+                        });
+                      }
+                    });
+                  }
                   res.send({
-                    members: arr,
+                    // members: arr,
                     notifies: notifies,
-                    normalMem: normal,
-                    favoriteMem: favorite
+                    normalMem: normalList,
+                    favoriteMem: favoriteList
+                    // contactList: contactList
                   });
                   return;
                 }
@@ -380,6 +542,21 @@ module.exports = function(app, io) {
       }
     );
   });
+  app.post("/savemailalert", function(req, res) {
+    User.findOneAndUpdate(
+      {
+        email: req.body.email
+      },
+      { $set: { emailAlert: req.body.emailAlert } },
+      function(err, result) {
+        if (err) {
+          return err;
+        } else {
+          res.send(result);
+        }
+      }
+    );
+  });
   app.post("/fileupload", (req, res, next) => {
     let imageFile = req.files.file;
     var filename = crypto.randomBytes(15).toString("hex");
@@ -394,25 +571,14 @@ module.exports = function(app, io) {
   });
 
   app.post("/sendcontact", (req, res, next) => {
-    const client = nodemailer.createTransport({
-      port: 25,
-      host: "https://venturetelsms.app",
-      tls: {
-        rejectUnauthorized: false
-      },
-      service: "SendGrid",
-      auth: {
-        user: "webDev713",
-        pass: "dragon713!"
-      }
-    });
     const email = {
       from: req.body.fromMail,
       to: req.body.toMail,
       subject: req.body.subject,
-      text: req.body.text
+      html: req.body.text
     };
-    client.sendMail(email, function(err, info) {
+
+    transport.sendMail(email, function(err, info) {
       if (err) {
         console.log("error");
       } else {
@@ -480,6 +646,47 @@ module.exports = function(app, io) {
         }
       }
     );
+  });
+  app.post("/adduserlabel", (req, res) => {
+    const { userID, phoneNumber, labelName, contactID } = req.body.msgData;
+    const data = {
+      userID: userID,
+      phoneNumber: phoneNumber,
+      labelName: labelName
+    };
+    if (!contactID) {
+      Contact.findOne(
+        {
+          userID: data.userID,
+          phoneNumber: data.phoneNumber
+        },
+        function(err, result) {
+          if (!result) {
+            Contact.create(data, function(err1, res1) {
+              if (err1) {
+                return;
+              } else {
+                res.send(res1);
+              }
+            });
+          }
+        }
+      );
+    } else {
+      Contact.updateOne(
+        {
+          _id: contactID
+        },
+        { $set: { labelName: labelName } },
+        function(err, result) {
+          if (err) {
+            return err;
+          } else {
+            res.send(result);
+          }
+        }
+      );
+    }
   });
 
   app.get("*", function(req, res) {
