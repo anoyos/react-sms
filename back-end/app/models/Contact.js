@@ -1,9 +1,9 @@
 const mongoose = require("mongoose");
 const Schema = mongoose.Schema;
 
-var UserSchema = new Schema(
+var ContactSchema = new Schema(
   {
-    email: {
+    userID: {
       type: String,
       default: ""
     },
@@ -11,13 +11,9 @@ var UserSchema = new Schema(
       type: String,
       default: ""
     },
-    style_mode: {
+    labelName: {
       type: String,
-      default: "dark"
-    },
-    emailAlert: {
-      type: Boolean,
-      default: false
+      default: ""
     }
   },
   {
@@ -25,4 +21,4 @@ var UserSchema = new Schema(
   }
 );
 
-module.exports = mongoose.model("User", UserSchema);
+module.exports = mongoose.model("Contact", ContactSchema);

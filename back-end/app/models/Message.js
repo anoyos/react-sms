@@ -35,6 +35,10 @@ var MessageSchema = new Schema(
     state: {
       type: String,
       default: "0"
+    },
+    email_alert: {
+      type: Boolean,
+      default: true
     }
   },
   {
